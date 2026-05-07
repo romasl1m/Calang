@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+            <html>
+            <head>
+                <meta charset="UTF-8">
+                <title>Rejestracja</title>
+                <style>
+                    body {
+                        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                        background-color: #f4f7f6;
+                        margin: 0;
+                        display: flex;
+                        justify-content: center;
+                        align-items: center;
+                        height: 100vh;
+                    }
+                    .container {
+                        display: flex;
+                        flex-direction: column;
+                        gap: 20px;
+                        width: 100%;
+                        max-width: 350px;
+                    }
+                    .box {
+                        background-color: white;
+                        padding: 30px;
+                        border-radius: 12px;
+                        box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+                        text-align: center;
+                        border-top: 5px solid #1a365d;
+                    }
+                    h2, h3 { color: #1a365d; margin-top: 0; }
+                    label { display: block; text-align: left; margin-bottom: 5px; color: #555; font-size: 14px; font-weight: bold; }
+                    input {
+                        width: 100%;
+                        padding: 10px;
+                        margin-bottom: 20px;
+                        border: 1px solid #ccc;
+                        border-radius: 6px;
+                        box-sizing: border-box;
+                        font-size: 14px;
+                    }
+                    input:focus { outline: none; border-color: #1a365d; }
+                    button {
+                        width: 100%;
+                        padding: 12px;
+                        background-color: #1a365d;
+                        color: white;
+                        border: none;
+                        border-radius: 6px;
+                        cursor: pointer;
+                        font-size: 16px;
+                        font-weight: bold;
+                        transition: background-color 0.3s;
+                    }
+                    button:hover { background-color: #122643; }
+                    .btn-secondary { background-color: #ffffff; color: #1a365d; border: 1px solid #1a365d; }
+                    .btn-secondary:hover { background-color: #f0f4f8; }
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <div class="box">
+                        <h2>Rejestracja</h2>
+                        <form action="/register" method="POST">
+                            <label>Login:</label>
+                            <input type="text" name="username" required>
+                            <label>Hasło:</label>
+                            <input type="password" name="password" required>
+                            <button type="submit">Zarejestruj się</button>
+                        </form>
+                    </div>
+                    <div class="box">
+                        <h3>Masz już konto?</h3>
+                        <form action="/" method="GET">
+                            <button class="btn-secondary" type="submit">Wróć do logowania</button>
+                        </form>
+                    </div>
+                </div>
+            </body>
+            </html>

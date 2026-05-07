@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Dashboard - Calang</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f7f6;
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+        .sidebar {
+            width: 260px;
+            background-color: #1a365d;
+            color: white;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+        }
+        .sidebar .logo {
+            font-size: 28px;
+            font-weight: bold;
+            padding: 25px 20px;
+            text-align: center;
+            border-bottom: 1px solid #2a4a7f;
+            letter-spacing: 1px;
+        }
+        .sidebar .side-panel {
+            flex: 1;
+            padding: 20px;
+        }
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+        .top-bar {
+            height: 70px;
+            background-color: white;
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            padding: 0 30px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            z-index: 10;
+        }
+        .user-profile {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        .username {
+            font-weight: 600;
+            color: #1a365d;
+            font-size: 16px;
+        }
+        .avatar {
+            width: 40px;
+            height: 40px;
+            background-color: #e2e8f0;
+            border-radius: 50%;
+            border: 2px solid #1a365d;
+        }
+        .logout-btn {
+            padding: 8px 16px;
+            background-color: #e53e3e;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+            font-size: 14px;
+            transition: background-color 0.2s;
+            margin-left: 5px;
+        }
+        .logout-btn:hover { background-color: #c53030; }
+
+        .action-bar {
+            background-color: white;
+            padding: 15px 30px;
+            display: flex;
+            gap: 15px;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        .action-btn {
+            padding: 10px 20px;
+            background-color: #1a365d;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: background-color 0.2s;
+        }
+        .action-btn:hover { background-color: #122643; }
+
+        .calendar-container {
+            flex: 1;
+            margin: 25px 30px;
+            background-color: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            padding: 30px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: #94a3b8;
+            font-size: 20px;
+        }
+
+        /* --- STYLE MODALA (OKIENKA) --- */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            display: none; /* Ukryty domyślnie */
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            backdrop-filter: blur(2px);
+        }
+        .modal-content {
+            background: white;
+            width: 90%;
+            max-width: 500px;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 20px 25px rgba(0,0,0,0.2);
+            animation: slideIn 0.3s ease-out;
+        }
+        @keyframes slideIn {
+            from { transform: translateY(-20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        .modal-header {
+            background-color: #1a365d;
+            color: white;
+            padding: 20px 25px;
+            font-size: 20px;
+            font-weight: 600;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .close-modal {
+            cursor: pointer;
+            font-size: 24px;
+            color: #cbd5e1;
+        }
+        .close-modal:hover { color: white; }
+        .modal-body { padding: 25px; }
+        .form-group { margin-bottom: 15px; }
+        .form-group label {
+            display: block;
+            margin-bottom: 6px;
+            color: #475569;
+            font-weight: 500;
+            font-size: 14px;
+        }
+        .form-group input, .form-group textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            box-sizing: border-box;
+            font-family: inherit;
+        }
+        .row { display: flex; gap: 15px; }
+        .row .form-group { flex: 1; }
+        .modal-footer {
+            padding: 15px 25px;
+            background-color: #f8fafc;
+            border-top: 1px solid #e2e8f0;
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+        .btn-cancel {
+            background: white;
+            border: 1px solid #cbd5e1;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+        .btn-submit {
+            background: #1a365d;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <aside class="sidebar">
+        <div class="logo">Calang</div>
+        <nav class="side-panel"></nav>
+    </aside>
+    
+    <main class="main-content">
+        <header class="top-bar">
+            <div class="user-profile">
+                <span class="username">{{username}}</span>
+                <div class="avatar"></div>
+                <form action="/logout" method="GET" style="margin: 0; display: flex; align-items: center;">
+                    <button type="submit" class="logout-btn">Wyloguj</button>
+                </form>
+            </div>
+        </header>
+        
+        <div class="action-bar">
+            <!-- ZMIANA: Wywołujemy funkcję JavaScript zamiast przekierowania -->
+            <button class="action-btn" onclick="openModal()">Nowe wydarzenie</button>
+            <button class="action-btn">Filtruj</button>
+        </div>
+        
+        <section class="calendar-container">
+            [Miejsce na wygenerowany kalendarz]
+        </section>
+    </main>
+
+    <!-- MODAL (Ukryte okienko) -->
+    <div id="eventModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span>Nowe wydarzenie</span>
+                <span class="close-modal" onclick="closeModal()">&times;</span>
+            </div>
+            <form action="/api/new_event" method="POST">
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="title">Tytuł wydarzenia</label>
+                        <input type="text" id="title" name="title" placeholder="np. Spotkanie zespołu" required>
+                    </div>
+                    <div class="row">
+                        <div class="form-group">
+                            <label for="start">Początek</label>
+                            <input type="datetime-local" id="start" name="start" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="end">Koniec</label>
+                            <input type="datetime-local" id="end" name="end" required>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="description">Opis</label>
+                        <textarea id="description" name="description" placeholder="Dodaj szczegóły..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn-cancel" onclick="closeModal()">Anuluj</button>
+                    <button type="submit" class="btn-submit">Zapisz</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        function openModal(){
+            document.getElementById('eventModal').style.display = 'flex';
+        }
+        function closeModal(){
+            document.getElementById('eventModal').style.display = 'none';
+        }
+        // Zamknij okno po kliknięciu w tło (overlay)
+        window.onclick = function(event){
+            let modal = document.getElementById('eventModal');
+            if(event.target == modal){
+                closeModal();
+            }
+        }
+    </script>
+</body>
+</html>
