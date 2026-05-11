@@ -1,281 +1,272 @@
 <!DOCTYPE html>
-<html>
+<html lang="pl">
 <head>
     <meta charset="UTF-8">
     <title>Dashboard - Calang</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1">
     <style>
-        body {
-            margin: 0;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #f4f7f6;
-            display: flex;
-            height: 100vh;
-            overflow: hidden;
-        }
-        .sidebar {
-            width: 260px;
-            background-color: #1a365d;
-            color: white;
-            display: flex;
-            flex-direction: column;
-            box-shadow: 2px 0 10px rgba(0,0,0,0.1);
-        }
-        .sidebar .logo {
-            font-size: 28px;
-            font-weight: bold;
-            padding: 25px 20px;
-            text-align: center;
-            border-bottom: 1px solid #2a4a7f;
-            letter-spacing: 1px;
-        }
-        .sidebar .side-panel {
-            flex: 1;
-            padding: 20px;
-        }
-        .main-content {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-        }
-        .top-bar {
-            height: 70px;
-            background-color: white;
-            display: flex;
-            justify-content: flex-end;
-            align-items: center;
-            padding: 0 30px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-            z-index: 10;
-        }
-        .user-profile {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-        }
-        .username {
-            font-weight: 600;
-            color: #1a365d;
-            font-size: 16px;
-        }
-        .avatar {
-            width: 40px;
-            height: 40px;
-            background-color: #e2e8f0;
-            border-radius: 50%;
-            border: 2px solid #1a365d;
-        }
-        .logout-btn {
-            padding: 8px 16px;
-            background-color: #e53e3e;
-            color: white;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-            font-weight: 500;
-            font-size: 14px;
-            transition: background-color 0.2s;
-            margin-left: 5px;
-        }
-        .logout-btn:hover { background-color: #c53030; }
-
-        .action-bar {
-            background-color: white;
-            padding: 15px 30px;
-            display: flex;
-            gap: 15px;
-            border-bottom: 1px solid #e2e8f0;
-        }
-        .action-btn {
-            padding: 10px 20px;
-            background-color: #1a365d;
-            color: white;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-            font-weight: 500;
-            transition: background-color 0.2s;
-        }
-        .action-btn:hover { background-color: #122643; }
-
-        .calendar-container {
-            flex: 1;
-            margin: 25px 30px;
-            background-color: white;
-            border-radius: 12px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
-            padding: 30px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            color: #94a3b8;
-            font-size: 20px;
+        :root {
+            --primary: #1a365d;
+            --accent:  #2b6cb0;
+            --bg:      #f4f7f6;
+            --text:    #2d3748;
+            --white:   #ffffff;
+            --ruler-width: 72px;
+            --hour-height: 60px;
         }
 
-        /* --- STYLE MODALA (OKIENKA) --- */
-        .modal-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.6);
-            display: none; /* Ukryty domyślnie */
-            justify-content: center;
-            align-items: center;
-            z-index: 1000;
-            backdrop-filter: blur(2px);
-        }
-        .modal-content {
-            background: white;
-            width: 90%;
-            max-width: 500px;
-            border-radius: 12px;
-            overflow: hidden;
-            box-shadow: 0 20px 25px rgba(0,0,0,0.2);
-            animation: slideIn 0.3s ease-out;
-        }
-        @keyframes slideIn {
-            from { transform: translateY(-20px); opacity: 0; }
-            to { transform: translateY(0); opacity: 1; }
-        }
-        .modal-header {
-            background-color: #1a365d;
-            color: white;
-            padding: 20px 25px;
-            font-size: 20px;
-            font-weight: 600;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        .close-modal {
-            cursor: pointer;
-            font-size: 24px;
-            color: #cbd5e1;
-        }
-        .close-modal:hover { color: white; }
-        .modal-body { padding: 25px; }
-        .form-group { margin-bottom: 15px; }
-        .form-group label {
-            display: block;
-            margin-bottom: 6px;
-            color: #475569;
-            font-weight: 500;
-            font-size: 14px;
-        }
-        .form-group input, .form-group textarea {
-            width: 100%;
-            padding: 10px;
-            border: 1px solid #cbd5e1;
-            border-radius: 6px;
-            box-sizing: border-box;
-            font-family: inherit;
-        }
-        .row { display: flex; gap: 15px; }
-        .row .form-group { flex: 1; }
-        .modal-footer {
-            padding: 15px 25px;
-            background-color: #f8fafc;
-            border-top: 1px solid #e2e8f0;
-            display: flex;
-            justify-content: flex-end;
-            gap: 10px;
-        }
-        .btn-cancel {
-            background: white;
-            border: 1px solid #cbd5e1;
-            padding: 10px 20px;
-            border-radius: 6px;
-            cursor: pointer;
-        }
-        .btn-submit {
-            background: #1a365d;
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 6px;
-            cursor: pointer;
-        }
+        *, *::before, *::after { box-sizing: border-box; }
+        html, body { height: 100%; margin: 0; font-family: 'Segoe UI', system-ui, sans-serif; color: var(--text); background: var(--bg); }
+
+        /* ── Layout ── */
+        .app    { display: flex; height: 100vh; overflow: hidden; }
+        .sidebar { width: 260px; background: var(--primary); color: #fff; display: flex; flex-direction: column; box-shadow: 2px 0 10px rgba(0,0,0,.08); }
+        .logo   { font-size: 28px; font-weight: 700; padding: 24px; text-align: center; border-bottom: 1px solid rgba(255,255,255,.06); }
+        .main   { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+
+        /* ── Top bar ── */
+        .top-bar  { height: 70px; background: var(--white); display: flex; align-items: center; justify-content: space-between; padding: 0 20px; box-shadow: 0 2px 5px rgba(0,0,0,.04); z-index: 5; }
+        .top-left  { display: flex; align-items: center; gap: 12px; }
+        .avatar    { width: 44px; height: 44px; border-radius: 50%; object-fit: cover; background: #e2e8f0; border: 2px solid #fff; }
+        .user-greet { font-weight: 600; }
+        .logout-btn { background: #e53e3e; color: #fff; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-weight: 600; transition: background .2s; }
+        .logout-btn:hover { background: #c53030; }
+
+        /* ── Action bar ── */
+        .action-bar { padding: 14px 20px; display: flex; gap: 12px; align-items: center; justify-content: space-between; }
+        .week-badge { background: var(--accent); color: white; padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 700; }
+
+        .action-btn { padding: 10px 16px; background: var(--primary); color: #fff; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; transition: background .2s; }
+        .action-btn:hover { background: var(--accent); }
+
+        /* ── Calendar wrapper ── */
+        .calendar-wrap { flex: 1; display: flex; padding: 18px; overflow: hidden; }
+        .calendar-card { background: var(--white); border-radius: 12px; box-shadow: 0 6px 18px rgba(0,0,0,.06); flex: 1; display: flex; flex-direction: column; min-width: 0; overflow: hidden; }
+        .calendar-nav  { display: flex; justify-content: space-between; align-items: center; padding: 18px; border-bottom: 1px solid #edf2f7; }
+        .nav-btn { background: #edf2f7; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-weight: 600; color: var(--text); }
+        .nav-btn:hover { background: #e2e8f0; }
+
+        .calendar-body { display: flex; flex: 1; min-height: 0; overflow: auto; }
+
+        /* ── Time ruler ── */
+        .time-ruler { width: var(--ruler-width); border-right: 1px solid #edf2f7; padding: 8px; background: linear-gradient(180deg,#fff,#fbfdff); flex-shrink: 0; }
+        .time-ruler .hour { height: var(--hour-height); padding-top: 6px; font-size: 12px; color: #718096; text-align: right; padding-right: 8px; }
+
+        /* ── Days grid ── */
+        .days-grid  { flex: 1; display: grid; grid-template-columns: repeat(7,1fr); gap: 1px; background: #edf2f7; min-width: 0; }
+        .day-column { background: #fff; min-height: calc(var(--hour-height)*24 + 48px); position: relative; overflow: hidden; }
+        .day-header { position: sticky; top: 0; background: linear-gradient(180deg,#fff,#f8fafc); z-index: 3; padding: 10px; border-bottom: 1px solid #edf2f7; text-align: center; font-weight: 700; font-size: 13px; }
+        .day-column .hour-line { position: absolute; left: 0; right: 0; height: 1px; border-top: 1px dashed #e2e8f0; z-index: 1; }
+
+        /* ── Event cards ── */
+        .event-card { position: absolute; left: 6px; right: 6px; background: linear-gradient(180deg,#fff,#f0f7ff); border-left: 4px solid var(--accent); box-shadow: 0 4px 10px rgba(0,0,0,.08); border-radius: 6px; padding: 6px 8px; font-size: 13px; overflow: hidden; cursor: pointer; z-index: 10; transition: box-shadow .15s, transform .1s; }
+        .event-card:hover { box-shadow: 0 6px 14px rgba(0,0,0,.15); transform: translateY(-1px); }
+        .event-card .time  { display: block; font-weight: 700; color: var(--accent); font-size: 12px; }
+        .event-card .title { font-weight: 600; margin-top: 4px; white-space: nowrap; text-overflow: ellipsis; overflow: hidden; }
+
+        /* ── Modals ── */
+        .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.45); align-items: center; justify-content: center; z-index: 999; backdrop-filter: blur(3px); }
+        .modal-overlay.open { display: flex; }
+        .modal-box { background: var(--white); border-radius: 14px; width: 100%; max-width: 420px; box-shadow: 0 16px 40px rgba(0,0,0,.18); animation: popIn .18s ease-out; overflow: hidden; }
+        @keyframes popIn { from { opacity: 0; transform: scale(.95) translateY(-8px); } to { opacity: 1; transform: none; } }
+
+        .modal-head   { background: var(--primary); color: #fff; padding: 16px 20px; font-weight: 700; font-size: 15px; }
+        .modal-body   { padding: 20px; }
+        .form-group   { margin-bottom: 14px; }
+        .form-group label { display: block; margin-bottom: 5px; font-size: 12px; font-weight: 600; color: #718096; text-transform: uppercase; letter-spacing: .05em; }
+        .form-control { width: 100%; padding: 10px 12px; border: 1px solid #cbd5e0; border-radius: 7px; font-family: inherit; font-size: 14px; }
+
+        .detail-head { padding: 20px 22px 14px; border-bottom: 1px solid #edf2f7; }
+        .detail-head h2 { margin: 0 0 4px; font-size: 18px; font-weight: 700; }
+        .detail-head .dtag { font-size: 12px; color: #718096; }
+
+        .detail-body { padding: 18px 22px; }
+        .detail-row  { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 14px; }
+        .detail-icon { width: 32px; height: 32px; background: #edf2f7; border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+        .detail-info label { display: block; font-size: 11px; font-weight: 700; color: #a0aec0; text-transform: uppercase; margin-bottom: 2px; }
+        
+        /* Edit mode toggle */
+        .edit-input { display: none; width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px; }
+        .edit-mode .view-span { display: none; }
+        .edit-mode .edit-input { display: block; }
+
+        .modal-foot { padding: 14px 20px; background: #f8fafc; display: flex; justify-content: flex-end; gap: 8px; border-top: 1px solid #edf2f7; }
+        .btn-ghost  { background: #edf2f7; color: var(--text); border: none; padding: 9px 16px; border-radius: 7px; cursor: pointer; font-weight: 600; }
+        .btn-delete { border: 1px solid #fc8181; color: #e53e3e; background: none; padding: 8px 14px; border-radius: 7px; cursor: pointer; }
     </style>
 </head>
 <body>
+<div class="app">
     <aside class="sidebar">
         <div class="logo">Calang</div>
-        <nav class="side-panel"></nav>
     </aside>
-    
-    <main class="main-content">
-        <header class="top-bar">
-            <div class="user-profile">
-                <span class="username">{{username}}</span>
-                <div class="avatar"></div>
-                <form action="/logout" method="GET" style="margin: 0; display: flex; align-items: center;">
-                    <button type="submit" class="logout-btn">Wyloguj</button>
-                </form>
-            </div>
-        </header>
-        
-        <div class="action-bar">
-            <!-- ZMIANA: Wywołujemy funkcję JavaScript zamiast przekierowania -->
-            <button class="action-btn" onclick="openModal()">Nowe wydarzenie</button>
-            <button class="action-btn">Filtruj</button>
-        </div>
-        
-        <section class="calendar-container">
-            [Miejsce na wygenerowany kalendarz]
-        </section>
-    </main>
 
-    <!-- MODAL (Ukryte okienko) -->
-    <div id="eventModal" class="modal-overlay">
-        <div class="modal-content">
-            <div class="modal-header">
-                <span>Nowe wydarzenie</span>
-                <span class="close-modal" onclick="closeModal()">&times;</span>
+    <div class="main">
+        <header class="top-bar">
+            <div class="top-left">
+                <img class="avatar" src="/static/profile.jpg" alt="avatar">
+                <div>
+                    <div class="user-greet">Witaj, <strong>{{username}}</strong>!</div>
+                </div>
             </div>
-            <form action="/api/new_event" method="POST">
-                <div class="modal-body">
-                    <div class="form-group">
-                        <label for="title">Tytuł wydarzenia</label>
-                        <input type="text" id="title" name="title" placeholder="np. Spotkanie zespołu" required>
-                    </div>
-                    <div class="row">
-                        <div class="form-group">
-                            <label for="start">Początek</label>
-                            <input type="datetime-local" id="start" name="start" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="end">Koniec</label>
-                            <input type="datetime-local" id="end" name="end" required>
-                        </div>
-                    </div>
-                    <div class="form-group">
-                        <label for="description">Opis</label>
-                        <textarea id="description" name="description" placeholder="Dodaj szczegóły..."></textarea>
+            <button onclick="location.href='/logout'" class="logout-btn">Wyloguj</button>
+        </header>
+
+        <div class="action-bar">
+            <button class="action-btn" onclick="openNewModal()">+ Nowe wydarzenie</button>
+            <div class="week-badge">TYDZIEŃ {{week_number}}</div>
+        </div>
+
+        <div class="calendar-wrap">
+            <div class="calendar-card">
+                <div class="calendar-nav">
+                    <button class="nav-btn" onclick="location.href='?date={{prev_week}}'">&lt; Poprzedni</button>
+                    <h3 style="margin:0;">{{week_range}}</h3>
+                    <button class="nav-btn" onclick="location.href='?date={{next_week}}'">Następny &gt;</button>
+                </div>
+                <div class="calendar-body">
+                    <div class="time-ruler" id="timeRuler"></div>
+                    <div class="days-grid" id="daysGrid">
+                        {{calendar_content}}
                     </div>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn-cancel" onclick="closeModal()">Anuluj</button>
-                    <button type="submit" class="btn-submit">Zapisz</button>
-                </div>
-            </form>
+            </div>
         </div>
     </div>
+</div>
 
-    <script>
-        function openModal(){
-            document.getElementById('eventModal').style.display = 'flex';
-        }
-        function closeModal(){
-            document.getElementById('eventModal').style.display = 'none';
-        }
-        // Zamknij okno po kliknięciu w tło (overlay)
-        window.onclick = function(event){
-            let modal = document.getElementById('eventModal');
-            if(event.target == modal){
-                closeModal();
-            }
-        }
-    </script>
+<div id="newModal" class="modal-overlay">
+    <div class="modal-box">
+        <div class="modal-head">Nowe wydarzenie</div>
+        <form action="/api/new_event" method="POST">
+            <div class="modal-body">
+                <div class="form-group"><label>Tytuł</label><input type="text" class="form-control" name="title" required></div>
+                <div class="form-group"><label>Początek</label><input type="datetime-local" class="form-control" name="start" required></div>
+                <div class="form-group"><label>Koniec</label><input type="datetime-local" class="form-control" name="end" required></div>
+                <div class="form-group"><label>Opis</label><textarea class="form-control" name="description"></textarea></div>
+            </div>
+            <div class="modal-foot">
+                <button type="button" class="btn-ghost" onclick="closeNewModal()">Anuluj</button>
+                <button type="submit" class="action-btn">Zapisz</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div id="detailModal" class="modal-overlay">
+    <div class="modal-box">
+        <form id="editForm" action="/api/edit_event" method="POST">
+            <input type="hidden" name="id" id="d-edit-id">
+            <div class="detail-head">
+                <h2 id="d-title-view" class="view-span"></h2>
+                <input type="text" name="title" id="d-title-input" class="edit-input form-control">
+                <span class="dtag" id="d-title-tag"></span>
+            </div>
+            <div class="detail-body" id="detailBody">
+                <div class="detail-row">
+                    <div class="detail-icon">👤</div>
+                    <div class="detail-info"><label>Użytkownik</label><span id="d-user"></span></div>
+                </div>
+                <div class="detail-row">
+                    <div class="detail-icon">🕐</div>
+                    <div class="detail-info">
+                        <label>Początek</label>
+                        <span id="d-start" class="view-span"></span>
+                        <input type="datetime-local" name="start" id="d-start-input" class="edit-input">
+                    </div>
+                </div>
+                <div class="detail-row">
+                    <div class="detail-icon">🕑</div>
+                    <div class="detail-info">
+                        <label>Koniec</label>
+                        <span id="d-end" class="view-span"></span>
+                        <input type="datetime-local" name="end" id="d-end-input" class="edit-input">
+                    </div>
+                </div>
+                <div class="detail-row">
+                    <div class="detail-icon">📝</div>
+                    <div class="detail-info">
+                        <label>Opis</label>
+                        <span id="d-desc" class="view-span"></span>
+                        <textarea name="description" id="d-desc-input" class="edit-input form-control"></textarea>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-foot">
+                <button type="button" class="btn-delete" onclick="submitDelete()">Usuń</button>
+                <div style="flex:1"></div>
+                <button type="button" class="btn-ghost" onclick="closeDetailModal()">Zamknij</button>
+                <button type="button" class="btn-edit action-btn" id="editBtn" onclick="toggleEditMode(true)">Edytuj</button>
+                <button type="submit" class="btn-save action-btn" id="saveBtn" style="display:none">Zapisz zmiany</button>
+            </div>
+        </form>
+        <form id="deleteForm" action="/api/delete_event" method="POST"><input type="hidden" name="id" id="d-del-id"></form>
+    </div>
+</div>
+
+<script>
+/* Budowa linijki czasu */
+(function(){
+    const ruler = document.getElementById('timeRuler');
+    for(let h=0; h<24; h++){
+        const el = document.createElement('div');
+        el.className = 'hour';
+        el.textContent = String(h).padStart(2,'0')+':00';
+        ruler.appendChild(el);
+    }
+})();
+
+function layoutEvents(){
+    const hh = 60;
+    document.querySelectorAll('.day-column').forEach(col => {
+        col.querySelectorAll('.event-card').forEach(ev => {
+            const s = ev.dataset.start_time || '00:00';
+            const e = ev.dataset.end_time || '00:00';
+            const startMin = parseInt(s.split(':')[0])*60 + parseInt(s.split(':')[1]);
+            const endMin = parseInt(e.split(':')[0])*60 + parseInt(e.split(':')[1]);
+            ev.style.top = (48 + (startMin/60)*hh) + 'px';
+            ev.style.height = Math.max(30, ((endMin-startMin)/60)*hh - 4) + 'px';
+            // Dodaj kliknięcie
+            ev.onclick = () => openDetailModal(ev);
+        });
+    });
+}
+
+function openNewModal(){ document.getElementById('newModal').classList.add('open'); }
+function closeNewModal(){ document.getElementById('newModal').classList.remove('open'); }
+
+function openDetailModal(card){
+    const d = card.dataset;
+    document.getElementById('d-title-view').textContent = d.title;
+    document.getElementById('d-title-input').value = d.title;
+    document.getElementById('d-title-tag').textContent = '#' + d.id;
+    document.getElementById('d-user').textContent = d.user;
+    document.getElementById('d-start').textContent = d.start;
+    document.getElementById('d-end').textContent = d.end;
+    document.getElementById('d-desc').textContent = d.description || 'Brak opisu';
+    
+    // Inputs
+    document.getElementById('d-start-input').value = d.start.replace(' ','T').slice(0,16);
+    document.getElementById('d-end-input').value = d.end.replace(' ','T').slice(0,16);
+    document.getElementById('d-desc-input').value = d.description;
+    
+    document.getElementById('d-edit-id').value = d.id;
+    document.getElementById('d-del-id').value = d.id;
+    
+    toggleEditMode(false);
+    document.getElementById('detailModal').classList.add('open');
+}
+
+function toggleEditMode(on){
+    document.getElementById('detailBody').parentElement.classList.toggle('edit-mode', on);
+    document.getElementById('editBtn').style.display = on ? 'none' : 'block';
+    document.getElementById('saveBtn').style.display = on ? 'block' : 'none';
+}
+
+function closeDetailModal(){ document.getElementById('detailModal').classList.remove('open'); }
+function submitDelete(){ if(confirm('Usunąć wydarzenie?')) document.getElementById('deleteForm').submit(); }
+
+window.onload = layoutEvents;
+</script>
 </body>
 </html>
