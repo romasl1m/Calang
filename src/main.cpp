@@ -14,7 +14,8 @@ int main(){
     dashboard(app);        
     api_routes(app);
 
-    app.port(8080).multithreaded().run();
+    // app.port(8080).multithreaded().run();
+    app.port(8080).bindaddr("0.0.0.0").multithreaded().run();
     
     return 0;
 }

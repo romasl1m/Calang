@@ -1,7 +1,9 @@
 #ifndef EVENT_H
 #define EVENT_H
+
 #include <string>
 #include <nlohmann/json.hpp>
+
 using json = nlohmann::json;
 
 struct Event {
@@ -13,12 +15,15 @@ struct Event {
     std::string description;
     std::string origin;
 
+    // Konstruktor
     Event(std::string t, std::string i, std::string s, std::string e, std::string u, std::string d, std::string o)
         : title(t), id(i), start(s), end(e), user(u), description(d), origin(o) {}
     
+    // Pusty konstruktor (wymagany przez niektóre operacje nlohmann::json)
     Event() = default;
 };
 
+// Używamy inline, aby uniknąć błędów multiple definition
 inline void to_json(json& j, const Event& e){
     j = json{{"id", e.id}, {"title", e.title}, {"start", e.start}, {"end", e.end}, {"user", e.user}, {"description", e.description}, {"origin", e.origin}};
 }

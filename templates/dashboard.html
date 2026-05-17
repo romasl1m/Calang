@@ -6,123 +6,258 @@
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <style>
         :root {
-            --primary: #1a365d;
-            --accent:  #2b6cb0;
-            --bg:      #f4f7f6;
-            --text:    #2d3748;
+            --primary: #1e293b;
+            --accent:  #3b82f6;
+            --bg:      #f8fafc;
+            --text:    #334155;
             --white:   #ffffff;
-            --ruler-width: 72px;
+            --border:  #e2e8f0;
+            --ruler-width: 60px;
             --hour-height: 60px;
         }
 
         *, *::before, *::after { box-sizing: border-box; }
-        html, body { height: 100%; margin: 0; font-family: 'Segoe UI', system-ui, sans-serif; color: var(--text); background: var(--bg); }
+        html, body { height: 100%; margin: 0; font-family: 'Inter', system-ui, sans-serif; color: var(--text); background: var(--bg); }
 
-        /* ── Layout ── */
-        .app    { display: flex; height: 100vh; overflow: hidden; }
-        .sidebar { width: 260px; background: var(--primary); color: #fff; display: flex; flex-direction: column; box-shadow: 2px 0 10px rgba(0,0,0,.08); }
-        .logo   { font-size: 28px; font-weight: 700; padding: 24px; text-align: center; border-bottom: 1px solid rgba(255,255,255,.06); }
-        .main   { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+        .app { display: flex; height: 100vh; overflow: hidden; }
 
-        /* ── Top bar ── */
-        .top-bar  { height: 70px; background: var(--white); display: flex; align-items: center; justify-content: space-between; padding: 0 20px; box-shadow: 0 2px 5px rgba(0,0,0,.04); z-index: 5; }
-        .top-left  { display: flex; align-items: center; gap: 12px; }
-        .avatar    { width: 44px; height: 44px; border-radius: 50%; object-fit: cover; background: #e2e8f0; border: 2px solid #fff; }
-        .user-greet { font-weight: 600; }
-        .logout-btn { background: #e53e3e; color: #fff; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-weight: 600; transition: background .2s; }
-        .logout-btn:hover { background: #c53030; }
+        /* ── Sidebar ── */
+        .sidebar {
+            width: 260px;
+            background: var(--primary);
+            color: #fff;
+            display: flex;
+            flex-direction: column;
+            z-index: 10;
+            overflow-y: auto;
+        }
+        .logo {
+            font-size: 26px;
+            font-weight: 800;
+            padding: 24px;
+            text-align: center;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            flex-shrink: 0;
+            cursor: pointer;
+        }
 
-        /* ── Action bar ── */
-        .action-bar { padding: 14px 20px; display: flex; gap: 12px; align-items: center; justify-content: space-between; }
-        .week-badge { background: var(--accent); color: white; padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 700; }
+        .sidebar-section {
+            padding: 16px;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+        .sidebar-section h3 {
+            margin: 0 0 8px;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            color: rgba(255,255,255,0.45);
+        }
 
-        .action-btn { padding: 10px 16px; background: var(--primary); color: #fff; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; transition: background .2s; }
-        .action-btn:hover { background: var(--accent); }
+        .sidebar-menu { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+        .sidebar-menu li {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 9px 12px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background 0.15s, color 0.15s;
+            color: rgba(255,255,255,0.75);
+        }
+        .sidebar-menu li:hover { background: rgba(255,255,255,0.08); color: #fff; }
+        .sidebar-menu li.active { background: var(--accent); color: #fff; font-weight: 600; }
 
-        /* ── Calendar wrapper ── */
-        .calendar-wrap { flex: 1; display: flex; padding: 18px; overflow: hidden; }
-        .calendar-card { background: var(--white); border-radius: 12px; box-shadow: 0 6px 18px rgba(0,0,0,.06); flex: 1; display: flex; flex-direction: column; min-width: 0; overflow: hidden; }
-        .calendar-nav  { display: flex; justify-content: space-between; align-items: center; padding: 18px; border-bottom: 1px solid #edf2f7; }
-        .nav-btn { background: #edf2f7; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-weight: 600; color: var(--text); }
-        .nav-btn:hover { background: #e2e8f0; }
+        #groups-list li::before {
+            content: ''; width: 8px; height: 8px; border-radius: 50%; background: #22c55e; flex-shrink: 0;
+        }
+        #groups-list li.active::before { background: #fff; }
 
-        .calendar-body { display: flex; flex: 1; min-height: 0; overflow: auto; }
+        .group-empty {
+            font-size: 12px; color: rgba(255,255,255,0.35);
+            padding: 6px 12px; cursor: default !important;
+        }
+        .group-empty:hover { background: transparent !important; }
+        .group-empty::before { display: none !important; }
 
-        /* ── Time ruler ── */
-        .time-ruler { width: var(--ruler-width); border-right: 1px solid #edf2f7; padding: 8px; background: linear-gradient(180deg,#fff,#fbfdff); flex-shrink: 0; }
-        .time-ruler .hour { height: var(--hour-height); padding-top: 6px; font-size: 12px; color: #718096; text-align: right; padding-right: 8px; }
+        /* ── Sidebar forms ── */
+        .sidebar-forms { padding: 20px 16px; margin-top: auto; display: flex; flex-direction: column; gap: 16px; }
+        .group-form-block { display: flex; flex-direction: column; gap: 6px; }
+        .group-form-block label { font-size: 11px; font-weight: 700; color: rgba(255,255,255,0.4); text-transform: uppercase; }
+        .group-form-block .input-group { display: flex; gap: 4px; }
+        .group-form-block input {
+            flex: 1; background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.12);
+            border-radius: 6px; padding: 8px 10px; color: #fff; font-size: 12px; outline: none;
+        }
+        .group-form-block input::placeholder { color: rgba(255,255,255,0.35); }
+        .group-form-block input:focus { border-color: var(--accent); }
+        .group-form-block button {
+            background: rgba(59,130,246,0.2); border: 1px solid rgba(59,130,246,0.4); color: #93c5fd;
+            border-radius: 6px; padding: 8px 12px; font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.2s;
+            white-space: nowrap;
+        }
+        .group-form-block button:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
+        .btn-join-style { background: rgba(16,185,129,0.2) !important; border-color: rgba(16,185,129,0.4) !important; color: #6ee7b7 !important; }
+        .btn-join-style:hover { background: #10b981 !important; color: #fff !important; border-color: #10b981 !important; }
 
-        /* ── Days grid ── */
-        .days-grid  { flex: 1; display: grid; grid-template-columns: repeat(7,1fr); gap: 1px; background: #edf2f7; min-width: 0; }
-        .day-column { background: #fff; min-height: calc(var(--hour-height)*24 + 48px); position: relative; overflow: hidden; }
-        .day-header { position: sticky; top: 0; background: linear-gradient(180deg,#fff,#f8fafc); z-index: 3; padding: 10px; border-bottom: 1px solid #edf2f7; text-align: center; font-weight: 700; font-size: 13px; }
-        .day-column .hour-line { position: absolute; left: 0; right: 0; height: 1px; border-top: 1px dashed #e2e8f0; z-index: 1; }
+        /* ── Main area ── */
+        .main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+
+        .top-bar { height: 72px; background: var(--white); display: flex; align-items: center; justify-content: space-between; padding: 0 24px; border-bottom: 1px solid var(--border); z-index: 5; }
+        .top-left { display: flex; align-items: center; gap: 16px; }
+        .avatar { width: 42px; height: 42px; border-radius: 50%; border: 2px solid var(--border); }
+        .user-greet { font-weight: 600; font-size: 15px; color: #0f172a; }
+        .user-greet strong { color: var(--accent); }
+        .logout-btn { background: #ef4444; color: #fff; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: 600; transition: 0.2s; }
+        .logout-btn:hover { background: #dc2626; }
+
+        .action-bar { padding: 16px 24px; display: flex; gap: 12px; align-items: center; justify-content: space-between; background: var(--white); border-bottom: 1px solid var(--border); }
+        .week-badge { background: #eff6ff; color: var(--accent); padding: 6px 14px; border-radius: 20px; font-size: 13px; font-weight: 700; border: 1px solid #bfdbfe; }
+        .action-btn { padding: 10px 18px; background: var(--accent); color: #fff; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; }
+        .action-btn:hover { filter: brightness(1.1); }
+
+        /* ── Calendar ── */
+        .calendar-wrap { flex: 1; display: flex; flex-direction: column; padding: 24px; overflow: hidden; }
+        .calendar-card { background: var(--white); border-radius: 12px; border: 1px solid var(--border); flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+
+        .calendar-nav { display: flex; justify-content: space-between; align-items: center; padding: 16px 24px; border-bottom: 1px solid var(--border); }
+        .nav-btn { background: #f1f5f9; border: 1px solid var(--border); padding: 8px 14px; border-radius: 6px; cursor: pointer; font-weight: 600; }
+        .calendar-nav h3 { margin: 0; font-size: 16px; color: #0f172a; }
+
+        .calendar-body { display: flex; flex: 1; overflow-y: auto; overflow-x: hidden; position: relative; }
+
+        .time-ruler { width: var(--ruler-width); border-right: 1px solid var(--border); flex-shrink: 0; background: #fafafa; }
+        .time-ruler .hour { height: var(--hour-height); font-size: 11px; color: #64748b; font-weight: 600; text-align: right; padding-right: 12px; position: relative; top: -7px; }
+
+        .days-grid { flex: 1; display: grid; grid-template-columns: repeat(7, 1fr); background: var(--white); }
+        .day-column { position: relative; background: transparent; min-height: calc(var(--hour-height) * 24 + 48px); border-right: 1px solid var(--border); }
+        .day-column:last-child { border-right: none; }
+
+        .day-header { position: sticky; top: 0; background: rgba(255,255,255,0.95); z-index: 30; padding: 12px 0; border-bottom: 1px solid var(--border); text-align: center; font-weight: 700; font-size: 13px; height: 48px; }
+        .day-column .hour-line { position: absolute; left: 0; right: 0; height: 1px; border-top: 1px solid var(--border); z-index: 1; }
 
         /* ── Event cards ── */
-        .event-card { position: absolute; left: 6px; right: 6px; background: linear-gradient(180deg,#fff,#f0f7ff); border-left: 4px solid var(--accent); box-shadow: 0 4px 10px rgba(0,0,0,.08); border-radius: 6px; padding: 6px 8px; font-size: 13px; overflow: hidden; cursor: pointer; z-index: 10; transition: box-shadow .15s, transform .1s; }
-        .event-card:hover { box-shadow: 0 6px 14px rgba(0,0,0,.15); transform: translateY(-1px); }
-        .event-card .time  { display: block; font-weight: 700; color: var(--accent); font-size: 12px; }
-        .event-card .title { font-weight: 600; margin-top: 4px; white-space: nowrap; text-overflow: ellipsis; overflow: hidden; }
+        .event-card { position: absolute; z-index: 5; left: 4px; right: 4px; background: #eff6ff; border-radius: 6px; padding: 4px 6px; font-size: 12px; cursor: pointer; overflow: hidden; transition: 0.15s; border-left: 4px solid var(--accent); box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+        .event-card:hover { z-index: 20 !important; box-shadow: 0 4px 12px rgba(0,0,0,0.15); filter: brightness(0.97); }
+        .event-card .time { display: block; font-weight: 700; color: var(--accent); margin-bottom: 2px; }
+        .event-card .title { font-weight: 600; color: #1e293b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .event-card.overlap { border: 2px solid #000 !important; border-left: 4px solid #000 !important; background: #f8fafc; }
+        .event-card.allday { background: #fef08a; border: 1px solid #eab308; border-left: 4px solid #ca8a04; display: flex; align-items: center; padding: 0 8px; }
+        .event-card.allday .title { color: #854d0e; margin: 0; }
+        .event-card .group-badge {
+            display: inline-block; font-size: 10px; font-weight: 700; padding: 1px 5px; border-radius: 4px;
+            background: rgba(59,130,246,0.15); color: var(--accent); margin-top: 2px;
+            overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%;
+        }
 
         /* ── Modals ── */
-        .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.45); align-items: center; justify-content: center; z-index: 999; backdrop-filter: blur(3px); }
+        .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(15,23,42,0.6); align-items: center; justify-content: center; z-index: 999; padding: 16px; }
         .modal-overlay.open { display: flex; }
-        .modal-box { background: var(--white); border-radius: 14px; width: 100%; max-width: 420px; box-shadow: 0 16px 40px rgba(0,0,0,.18); animation: popIn .18s ease-out; overflow: hidden; }
-        @keyframes popIn { from { opacity: 0; transform: scale(.95) translateY(-8px); } to { opacity: 1; transform: none; } }
+        .modal-box { background: var(--white); border-radius: 12px; width: 100%; max-width: 460px; overflow: hidden; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); }
 
-        .modal-head   { background: var(--primary); color: #fff; padding: 16px 20px; font-weight: 700; font-size: 15px; }
-        .modal-body   { padding: 20px; }
-        .form-group   { margin-bottom: 14px; }
-        .form-group label { display: block; margin-bottom: 5px; font-size: 12px; font-weight: 600; color: #718096; text-transform: uppercase; letter-spacing: .05em; }
-        .form-control { width: 100%; padding: 10px 12px; border: 1px solid #cbd5e0; border-radius: 7px; font-family: inherit; font-size: 14px; }
+        .modal-head { background: #f8fafc; padding: 18px 24px; font-weight: 700; border-bottom: 1px solid var(--border); font-size: 16px; }
+        .modal-body { padding: 24px; }
+        .form-group { margin-bottom: 16px; }
+        .form-row { display: flex; gap: 12px; }
+        .form-row .form-group { flex: 1; }
+        .form-group label { display: block; margin-bottom: 6px; font-size: 12px; font-weight: 700; color: #64748b; }
+        .form-control { width: 100%; padding: 10px 14px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; outline: none; transition: border-color 0.2s; font-family: inherit; }
+        .form-control:focus { border-color: var(--accent); }
+        .checkbox-group { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
+        .checkbox-group input { width: 18px; height: 18px; cursor: pointer; }
+        .checkbox-group label { margin: 0; cursor: pointer; font-size: 14px; font-weight: 500; color: var(--text); }
 
-        .detail-head { padding: 20px 22px 14px; border-bottom: 1px solid #edf2f7; }
-        .detail-head h2 { margin: 0 0 4px; font-size: 18px; font-weight: 700; }
-        .detail-head .dtag { font-size: 12px; color: #718096; }
+        .detail-head { padding: 24px; border-bottom: 1px solid var(--border); background: #f8fafc; }
+        .detail-head h2 { margin: 0 0 4px; font-size: 20px; font-weight: 800; color: #0f172a; }
+        .detail-body { padding: 20px 24px; }
+        .detail-row { display: flex; gap: 14px; margin-bottom: 16px; align-items: flex-start; }
+        .detail-icon { width: 32px; height: 32px; background: #f1f5f9; border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 14px; }
+        .detail-info { flex: 1; }
+        .detail-info label { display: block; font-size: 11px; font-weight: 700; color: #94a3b8; margin-bottom: 4px; text-transform: uppercase; }
+        .view-span { font-size: 14px; font-weight: 500; display: block; color: #1e293b; }
 
-        .detail-body { padding: 18px 22px; }
-        .detail-row  { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 14px; }
-        .detail-icon { width: 32px; height: 32px; background: #edf2f7; border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-        .detail-info label { display: block; font-size: 11px; font-weight: 700; color: #a0aec0; text-transform: uppercase; margin-bottom: 2px; }
-        
-        /* Edit mode toggle */
-        .edit-input { display: none; width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px; }
+        .edit-input, .edit-mode-only { display: none; }
         .edit-mode .view-span { display: none; }
         .edit-mode .edit-input { display: block; }
+        .edit-mode .edit-mode-only { display: flex; }
 
-        .modal-foot { padding: 14px 20px; background: #f8fafc; display: flex; justify-content: flex-end; gap: 8px; border-top: 1px solid #edf2f7; }
-        .btn-ghost  { background: #edf2f7; color: var(--text); border: none; padding: 9px 16px; border-radius: 7px; cursor: pointer; font-weight: 600; }
-        .btn-delete { border: 1px solid #fc8181; color: #e53e3e; background: none; padding: 8px 14px; border-radius: 7px; cursor: pointer; }
+        .modal-foot { padding: 16px 24px; background: #f8fafc; display: flex; justify-content: flex-end; gap: 10px; border-top: 1px solid var(--border); }
+        .btn-ghost { background: #fff; border: 1px solid #cbd5e1; padding: 10px 16px; border-radius: 8px; cursor: pointer; font-weight: 600; }
+        .btn-delete { background: #fee2e2; border: 1px solid #fca5a5; color: #ef4444; padding: 10px 16px; border-radius: 8px; cursor: pointer; font-weight: 600; }
+        .btn-delete:hover { background: #ef4444; color: #fff; }
+
+        select.form-control {
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2364748b' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 12px center;
+            padding-right: 32px;
+            cursor: pointer;
+        }
     </style>
 </head>
 <body>
 <div class="app">
+
     <aside class="sidebar">
-        <div class="logo">Calang</div>
+        <div class="logo" onclick="switchView('all')">Calang</div>
+
+        <div class="sidebar-section">
+            <h3>Widok kalendarza</h3>
+            <ul class="sidebar-menu">
+                <li id="view-all" onclick="switchView('all')">Wszystkie wydarzenia</li>
+                <li id="view-private" onclick="switchView('private')">Tylko prywatne</li>
+            </ul>
+        </div>
+
+        <div class="sidebar-section">
+            <h3>Twoje grupy</h3>
+            <ul class="sidebar-menu" id="groups-list">
+                <li class="group-empty">Ładowanie grup…</li>
+            </ul>
+        </div>
+
+        <div class="sidebar-forms">
+            <div class="group-form-block">
+                <label>Nowa grupa</label>
+                <div class="input-group">
+                    <input type="text" id="new-group-name" placeholder="Nazwa grupy" maxlength="60">
+                    <button onclick="createGroup()">Stwórz</button>
+                </div>
+            </div>
+
+            <div class="group-form-block">
+                <label>Dołącz do grupy</label>
+                <div class="input-group">
+                    <input type="text" id="join-group-id" placeholder="ID grupy">
+                    <button class="btn-join-style" onclick="joinGroup()">Dołącz</button>
+                </div>
+            </div>
+        </div>
     </aside>
 
     <div class="main">
         <header class="top-bar">
             <div class="top-left">
-                <img class="avatar" src="/static/profile.jpg" alt="avatar">
-                <div>
-                    <div class="user-greet">Witaj, <strong>{{username}}</strong>!</div>
-                </div>
+                <img class="avatar" src="/static/profile.jpg" onerror="this.style.display='none'">
+                <div class="user-greet">Witaj, <strong>{{username}}</strong>!</div>
             </div>
             <button onclick="location.href='/logout'" class="logout-btn">Wyloguj</button>
         </header>
 
         <div class="action-bar">
             <button class="action-btn" onclick="openNewModal()">+ Nowe wydarzenie</button>
-            <div class="week-badge">TYDZIEŃ {{week_number}}</div>
+            <div class="week-badge" id="weekBadge">TYDZIEŃ</div>
         </div>
 
         <div class="calendar-wrap">
             <div class="calendar-card">
                 <div class="calendar-nav">
-                    <button class="nav-btn" onclick="location.href='?date={{prev_week}}'">&lt; Poprzedni</button>
-                    <h3 style="margin:0;">{{week_range}}</h3>
-                    <button class="nav-btn" onclick="location.href='?date={{next_week}}'">Następny &gt;</button>
+                    <button class="nav-btn" onclick="changeWeek('{{prev_week}}')">&lt; Poprzedni</button>
+                    <h3>{{week_range}}</h3>
+                    <button class="nav-btn" onclick="changeWeek('{{next_week}}')">Następny &gt;</button>
                 </div>
                 <div class="calendar-body">
                     <div class="time-ruler" id="timeRuler"></div>
@@ -138,12 +273,50 @@
 <div id="newModal" class="modal-overlay">
     <div class="modal-box">
         <div class="modal-head">Nowe wydarzenie</div>
-        <form action="/api/new_event" method="POST">
+        <form id="newEventForm" action="/api/new_event" method="POST" onsubmit="prepareNewEventSubmit()">
+            <input type="hidden" name="start" id="n_start_hidden">
+            <input type="hidden" name="end"   id="n_end_hidden">
+
             <div class="modal-body">
-                <div class="form-group"><label>Tytuł</label><input type="text" class="form-control" name="title" required></div>
-                <div class="form-group"><label>Początek</label><input type="datetime-local" class="form-control" name="start" required></div>
-                <div class="form-group"><label>Koniec</label><input type="datetime-local" class="form-control" name="end" required></div>
-                <div class="form-group"><label>Opis</label><textarea class="form-control" name="description"></textarea></div>
+                <div class="form-group">
+                    <label>Tytuł</label>
+                    <input type="text" class="form-control" name="title" required>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Data</label>
+                        <input type="date" class="form-control" id="n_date" required>
+                    </div>
+                </div>
+
+                <div class="form-row" id="n_time_row">
+                    <div class="form-group">
+                        <label>Godzina od</label>
+                        <input type="time" class="form-control" id="n_start" value="12:00">
+                    </div>
+                    <div class="form-group">
+                        <label>Godzina do</label>
+                        <input type="time" class="form-control" id="n_end" value="13:00">
+                    </div>
+                </div>
+
+                <div class="form-group checkbox-group">
+                    <input type="checkbox" id="n_allday" onchange="toggleAllDay(this, 'n_time_row')">
+                    <label for="n_allday">Wydarzenie całodniowe</label>
+                </div>
+
+                <div class="form-group">
+                    <label>Dodaj do</label>
+                    <select class="form-control" id="n_origin" name="origin">
+                        <option value="private">Prywatne</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>Opis</label>
+                    <textarea class="form-control" name="description" rows="3"></textarea>
+                </div>
             </div>
             <div class="modal-foot">
                 <button type="button" class="btn-ghost" onclick="closeNewModal()">Anuluj</button>
@@ -155,40 +328,57 @@
 
 <div id="detailModal" class="modal-overlay">
     <div class="modal-box">
-        <form id="editForm" action="/api/edit_event" method="POST">
-            <input type="hidden" name="id" id="d-edit-id">
+        <form id="editForm" action="/api/edit_event" method="POST" onsubmit="prepareEditEventSubmit()">
+            <input type="hidden" name="id"    id="d-edit-id">
+            <input type="hidden" name="start" id="e_start_hidden">
+            <input type="hidden" name="end"   id="e_end_hidden">
+            <input type="hidden" name="origin" id="d-edit-origin">
             <div class="detail-head">
                 <h2 id="d-title-view" class="view-span"></h2>
-                <input type="text" name="title" id="d-title-input" class="edit-input form-control">
-                <span class="dtag" id="d-title-tag"></span>
+                <input type="text" name="title" id="d-title-input" class="edit-input form-control" required>
             </div>
             <div class="detail-body" id="detailBody">
                 <div class="detail-row">
                     <div class="detail-icon">👤</div>
-                    <div class="detail-info"><label>Użytkownik</label><span id="d-user"></span></div>
+                    <div class="detail-info"><label>Właściciel</label><span id="d-user" class="view-span"></span></div>
                 </div>
-                <div class="detail-row">
+
+                <div class="detail-row view-span">
                     <div class="detail-icon">🕐</div>
-                    <div class="detail-info">
-                        <label>Początek</label>
-                        <span id="d-start" class="view-span"></span>
-                        <input type="datetime-local" name="start" id="d-start-input" class="edit-input">
+                    <div class="detail-info"><label>Czas</label><span id="d-time-view"></span></div>
+                </div>
+
+                <div class="edit-mode-only" style="flex-direction: column; gap: 12px; margin-bottom: 16px;">
+                    <div class="form-row">
+                        <div class="form-group" style="margin:0"><label>Data</label><input type="date" class="form-control" id="e_date" required></div>
+                    </div>
+                    <div class="form-row" id="e_time_row">
+                        <div class="form-group" style="margin:0"><label>Od</label><input type="time" class="form-control" id="e_start"></div>
+                        <div class="form-group" style="margin:0"><label>Do</label><input type="time" class="form-control" id="e_end"></div>
+                    </div>
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="e_allday" onchange="toggleAllDay(this, 'e_time_row')">
+                        <label for="e_allday">Wydarzenie całodniowe</label>
                     </div>
                 </div>
+
                 <div class="detail-row">
-                    <div class="detail-icon">🕑</div>
+                    <div class="detail-icon">👁️</div>
                     <div class="detail-info">
-                        <label>Koniec</label>
-                        <span id="d-end" class="view-span"></span>
-                        <input type="datetime-local" name="end" id="d-end-input" class="edit-input">
+                        <label>Widoczność</label>
+                        <span id="d-origin-view" class="view-span"></span>
+                        <select class="form-control edit-input" id="e_origin" name="origin">
+                            <option value="private">Prywatne</option>
+                        </select>
                     </div>
                 </div>
+
                 <div class="detail-row">
                     <div class="detail-icon">📝</div>
                     <div class="detail-info">
                         <label>Opis</label>
                         <span id="d-desc" class="view-span"></span>
-                        <textarea name="description" id="d-desc-input" class="edit-input form-control"></textarea>
+                        <textarea name="description" id="d-desc-input" class="edit-input form-control" rows="3"></textarea>
                     </div>
                 </div>
             </div>
@@ -196,77 +386,358 @@
                 <button type="button" class="btn-delete" onclick="submitDelete()">Usuń</button>
                 <div style="flex:1"></div>
                 <button type="button" class="btn-ghost" onclick="closeDetailModal()">Zamknij</button>
-                <button type="button" class="btn-edit action-btn" id="editBtn" onclick="toggleEditMode(true)">Edytuj</button>
-                <button type="submit" class="btn-save action-btn" id="saveBtn" style="display:none">Zapisz zmiany</button>
+                <button type="button" class="action-btn" id="editBtn" onclick="toggleEditMode(true)">Edytuj</button>
+                <button type="submit" class="action-btn" id="saveBtn" style="display:none">Zapisz</button>
             </div>
         </form>
-        <form id="deleteForm" action="/api/delete_event" method="POST"><input type="hidden" name="id" id="d-del-id"></form>
+
+        <form id="deleteForm" action="/api/delete_event" method="POST" style="display:none;">
+            <input type="hidden" name="id"     id="d-del-id">
+            <input type="hidden" name="origin" id="d-del-origin">
+        </form>
     </div>
 </div>
 
 <script>
-/* Budowa linijki czasu */
+/* ══════════════════════════════════════════════
+   1. Time Ruler
+══════════════════════════════════════════════ */
 (function(){
     const ruler = document.getElementById('timeRuler');
-    for(let h=0; h<24; h++){
+    const spacer = document.createElement('div');
+    spacer.style.height = '48px';
+    ruler.appendChild(spacer);
+    for(let h = 0; h < 24; h++){
         const el = document.createElement('div');
         el.className = 'hour';
-        el.textContent = String(h).padStart(2,'0')+':00';
+        el.textContent = String(h).padStart(2,'0') + ':00';
         ruler.appendChild(el);
     }
 })();
 
+/* ══════════════════════════════════════════════
+   2. Time helpers
+══════════════════════════════════════════════ */
+function getMinutesFromStr(timeStr){
+    if(!timeStr || !timeStr.includes(':')) return 0;
+    const parts = timeStr.split(':');
+    return parseInt(parts[0], 10) * 60 + parseInt(parts[1], 10);
+}
+
+/* ══════════════════════════════════════════════
+   3. Calendar layout — positions event cards
+══════════════════════════════════════════════ */
 function layoutEvents(){
     const hh = 60;
+    const headerOffset = 48;
+
     document.querySelectorAll('.day-column').forEach(col => {
+        const dayDate = col.dataset.day;
+
+        // Hour grid lines
+        for(let h = 0; h < 24; h++){
+            const line = document.createElement('div');
+            line.className = 'hour-line';
+            line.style.top = (headerOffset + h * hh) + 'px';
+            col.appendChild(line);
+        }
+
+        const regularEvents = [];
+        const allDayEvents = [];
+
         col.querySelectorAll('.event-card').forEach(ev => {
-            const s = ev.dataset.start_time || '00:00';
-            const e = ev.dataset.end_time || '00:00';
-            const startMin = parseInt(s.split(':')[0])*60 + parseInt(s.split(':')[1]);
-            const endMin = parseInt(e.split(':')[0])*60 + parseInt(e.split(':')[1]);
-            ev.style.top = (48 + (startMin/60)*hh) + 'px';
-            ev.style.height = Math.max(30, ((endMin-startMin)/60)*hh - 4) + 'px';
-            // Dodaj kliknięcie
-            ev.onclick = () => openDetailModal(ev);
+            const title = ev.dataset.title || ev.querySelector('.title')?.textContent || 'Wydarzenie';
+            ev.dataset.title = title;
+            ev.dataset.fullDate = dayDate;
+
+            const startStr = ev.dataset.start || '00:00';
+            const endStr   = ev.dataset.end   || '23:59';
+            const startMin = getMinutesFromStr(startStr);
+            const endMin   = getMinutesFromStr(endStr);
+            const isAllDay = (startStr === '00:00' && endStr === '23:59');
+
+            if(isAllDay){
+                allDayEvents.push({el: ev, title});
+            } else {
+                regularEvents.push({el: ev, sMin: startMin, eMin: endMin <= startMin ? startMin + 30 : endMin, sStr: startStr, title});
+            }
+        });
+
+        // All-day events
+        allDayEvents.forEach((item, i) => {
+            item.el.style.top    = (headerOffset + i * 32) + 'px';
+            item.el.style.height = '30px';
+            item.el.style.left   = '4px';
+            item.el.style.right  = '4px';
+            item.el.classList.add('allday');
+            item.el.innerHTML = `<span class="title">${item.title}</span>`;
+            item.el.onclick = () => openDetailModal(item.el);
+        });
+
+        // Regular events with overlap detection
+        regularEvents.sort((a, b) => a.sMin - b.sMin);
+        let activeEvents = [];
+        regularEvents.forEach(item => {
+            activeEvents = activeEvents.filter(a => a.eMin > item.sMin);
+            const level = activeEvents.length;
+
+            item.el.style.top    = (headerOffset + item.sMin) + 'px';
+            item.el.style.height = Math.max(20, item.eMin - item.sMin) + 'px';
+            item.el.style.zIndex = 10 + level;
+
+            if(level > 0){
+                item.el.style.left = (4 + level * 18) + 'px';
+                item.el.classList.add('overlap');
+            } else {
+                item.el.style.left = '4px';
+            }
+
+            const originVal = item.el.dataset.origin;
+            const groupBadge = (originVal && originVal !== 'private')
+                ? `<span class="group-badge">👥 ${originVal}</span>` : '';
+
+            item.el.innerHTML = `<span class="time">${item.sStr.substring(0,5)}</span><div class="title">${item.title}</div>${groupBadge}`;
+            item.el.onclick = () => openDetailModal(item.el);
+
+            activeEvents.push(item);
         });
     });
 }
 
-function openNewModal(){ document.getElementById('newModal').classList.add('open'); }
+/* ══════════════════════════════════════════════
+   4. Week number badge
+══════════════════════════════════════════════ */
+function updateWeekNumber(){
+    const badge = document.getElementById('weekBadge');
+    if(!badge) return;
+    const urlParams = new URLSearchParams(window.location.search);
+    let d = urlParams.get('date') ? new Date(urlParams.get('date')) : new Date();
+    if(isNaN(d.getTime())) d = new Date();
+    d.setHours(0,0,0,0);
+    d.setDate(d.getDate() + 3 - (d.getDay() + 6) % 7);
+    const week1 = new Date(d.getFullYear(), 0, 4);
+    const weekNum = 1 + Math.round(((d - week1) / 86400000 - 3 + (week1.getDay() + 6) % 7) / 7);
+    badge.textContent = 'TYDZIEŃ ' + weekNum;
+}
+
+/* ══════════════════════════════════════════════
+   5. Week navigation — preserves view param
+══════════════════════════════════════════════ */
+function changeWeek(dateVal){
+    const params = new URLSearchParams(window.location.search);
+    params.set('date', dateVal);
+    window.location.search = params.toString();
+}
+
+/* ══════════════════════════════════════════════
+   6. View switching
+══════════════════════════════════════════════ */
+function switchView(viewName){
+    const params = new URLSearchParams(window.location.search);
+    params.set('view', viewName);
+    window.location.search = params.toString();
+}
+
+/* ══════════════════════════════════════════════
+   7. Groups — load, sidebar, selects
+══════════════════════════════════════════════ */
+let cachedGroups = [];
+
+function loadGroups(){
+    fetch("/api/my_groups")
+    .then(res => res.json())
+    .then(groups => {
+        cachedGroups = groups;
+        const list = document.getElementById("groups-list");
+        const originSelect = document.getElementById("n_origin");
+        
+        // Resetujemy dropdown do stanu podstawowego (tylko prywatne)
+        if(originSelect){
+            originSelect.innerHTML = '<option value="private">Prywatne</option>';
+        }
+
+        if(groups.length === 0){
+            list.innerHTML = '<li class="group-empty">Loading the groups…</li>';
+            return;
+        }
+
+        // Czyszczenie domyślnego tekstu "Ładowanie..."
+        list.innerHTML = "";
+
+        groups.forEach(g => {
+            // 1. Dodawanie elementu do sidebaru
+            const li = document.createElement("li");
+            li.id = "group-" + g.id;
+            li.innerHTML = ` ${g.name}`;
+            li.onclick = () => switchView(g.id);
+            list.appendChild(li);
+
+            // 2. Dynamiczne dodawanie grupy do wyboru w nowym wydarzeniu
+            if(originSelect){
+                const opt = document.createElement("option");
+                opt.value = g.id;
+                opt.textContent = ` ${g.name}`;
+                originSelect.appendChild(opt);
+            }
+        });
+    });
+}
+
+function createGroup(){
+    const input = document.getElementById('new-group-name');
+    const name  = input.value.trim();
+    if(!name) return;
+    fetch('/api/create_group', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+        body: 'name=' + encodeURIComponent(name)
+    }).then(r => {
+        if(r.ok){ input.value = ''; location.reload(); }
+        else alert('Error while creating a group.');
+    });
+}
+
+function joinGroup(){
+    const input = document.getElementById('join-group-id');
+    const id    = input.value.trim();
+    if(!id) return;
+    fetch('/api/join_group', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+        body: 'group_id=' + encodeURIComponent(id)
+    }).then(r => {
+        if(r.ok){ input.value = ''; location.reload(); }
+        else alert('Cannot join the group. Check the ID.');
+    });
+}
+
+/* ══════════════════════════════════════════════
+   8. All-day toggle
+══════════════════════════════════════════════ */
+function toggleAllDay(checkbox, timeRowId){
+    const row = document.getElementById(timeRowId);
+    row.style.opacity = checkbox.checked ? '0.4' : '1';
+    row.querySelectorAll('input').forEach(i => {
+        checkbox.checked ? i.removeAttribute('required') : i.setAttribute('required', 'true');
+    });
+}
+
+/* ══════════════════════════════════════════════
+   9. New event modal
+══════════════════════════════════════════════ */
+function openNewModal(){
+    document.getElementById('newEventForm').reset();
+    document.getElementById('n_time_row').style.opacity = '1';
+    document.getElementById('newModal').classList.add('open');
+    const originSelect = document.getElementById("n_origin");
+    if(originSelect){
+        if(typeof currentView !== "undefined" && currentView !== "all" && currentView !== "private"){
+            originSelect.value = currentView;
+        } else {
+            originSelect.value = "private";
+        }
+    }
+
+    document.getElementById("newModal").classList.add("open");
+}
 function closeNewModal(){ document.getElementById('newModal').classList.remove('open'); }
 
+function prepareNewEventSubmit(){
+    const date     = document.getElementById('n_date').value;
+    const isAllDay = document.getElementById('n_allday').checked;
+    document.getElementById('n_start_hidden').value = date + ' ' + (isAllDay ? '00:00' : document.getElementById('n_start').value);
+    document.getElementById('n_end_hidden').value   = date + ' ' + (isAllDay ? '23:59' : document.getElementById('n_end').value);
+}
+
+/* ══════════════════════════════════════════════
+   10. Detail / Edit modal
+══════════════════════════════════════════════ */
 function openDetailModal(card){
-    const d = card.dataset;
-    document.getElementById('d-title-view').textContent = d.title;
-    document.getElementById('d-title-input').value = d.title;
-    document.getElementById('d-title-tag').textContent = '#' + d.id;
-    document.getElementById('d-user').textContent = d.user;
-    document.getElementById('d-start').textContent = d.start;
-    document.getElementById('d-end').textContent = d.end;
-    document.getElementById('d-desc').textContent = d.description || 'Brak opisu';
-    
-    // Inputs
-    document.getElementById('d-start-input').value = d.start.replace(' ','T').slice(0,16);
-    document.getElementById('d-end-input').value = d.end.replace(' ','T').slice(0,16);
-    document.getElementById('d-desc-input').value = d.description;
-    
-    document.getElementById('d-edit-id').value = d.id;
-    document.getElementById('d-del-id').value = d.id;
-    
+    const d        = card.dataset;
+    const isAllDay = card.classList.contains('allday');
+
+    // Parse stored start/end (may be "HH:MM" or "YYYY-MM-DD HH:MM")
+    let startDate = d.fullDate || '', startTime = '', endTime = '';
+    if(d.start && d.start.includes(' ')){
+        const p = d.start.split(' ');
+        startDate = p[0]; startTime = (p[1] || '').substring(0,5);
+    } else {
+        startTime = (d.start || '').substring(0,5);
+    }
+    if(d.end && d.end.includes(' ')){
+        endTime = (d.end.split(' ')[1] || '').substring(0,5);
+    } else {
+        endTime = (d.end || '').substring(0,5);
+    }
+
+    const originVal = d.origin || 'private';
+    let originLabel = 'Private';
+    if(originVal !== 'private'){
+        const grp = cachedGroups.find(g => String(g.id) === String(originVal));
+        originLabel = grp ? 'Group: ' + grp.name : 'Group: ' + originVal;
+    }
+
+    document.getElementById('d-title-view').textContent   = d.title || '';
+    document.getElementById('d-user').textContent         = d.user  || '';
+    document.getElementById('d-time-view').textContent    = isAllDay ? 'Cały dzień' : `${startDate} | ${startTime} – ${endTime}`;
+    document.getElementById('d-desc').textContent         = d.description || 'Brak opisu';
+    document.getElementById('d-origin-view').textContent  = originLabel;
+
+    document.getElementById('d-title-input').value = d.title || '';
+    document.getElementById('e_date').value        = startDate;
+    document.getElementById('e_start').value       = startTime;
+    document.getElementById('e_end').value         = endTime;
+    document.getElementById('e_origin').value      = originVal;
+    document.getElementById('d-desc-input').value  = d.description || '';
+
+    const alldayChk = document.getElementById('e_allday');
+    alldayChk.checked = isAllDay;
+    toggleAllDay(alldayChk, 'e_time_row');
+
+    document.getElementById('d-edit-id').value    = d.id;
+    document.getElementById('d-del-id').value     = d.id;
+    document.getElementById('d-del-origin').value = originVal;
+
     toggleEditMode(false);
     document.getElementById('detailModal').classList.add('open');
 }
 
+function prepareEditEventSubmit(){
+    const date     = document.getElementById('e_date').value;
+    const isAllDay = document.getElementById('e_allday').checked;
+    document.getElementById('e_start_hidden').value = date + ' ' + (isAllDay ? '00:00' : document.getElementById('e_start').value);
+    document.getElementById('e_end_hidden').value   = date + ' ' + (isAllDay ? '23:59' : document.getElementById('e_end').value);
+}
+
 function toggleEditMode(on){
-    document.getElementById('detailBody').parentElement.classList.toggle('edit-mode', on);
-    document.getElementById('editBtn').style.display = on ? 'none' : 'block';
-    document.getElementById('saveBtn').style.display = on ? 'block' : 'none';
+    const modal = document.getElementById('detailBody').closest('.modal-box');
+    on ? modal.classList.add('edit-mode') : modal.classList.remove('edit-mode');
+    document.getElementById('editBtn').style.display = on ? 'none'         : 'inline-block';
+    document.getElementById('saveBtn').style.display = on ? 'inline-block' : 'none';
 }
 
 function closeDetailModal(){ document.getElementById('detailModal').classList.remove('open'); }
-function submitDelete(){ if(confirm('Usunąć wydarzenie?')) document.getElementById('deleteForm').submit(); }
 
-window.onload = layoutEvents;
+function submitDelete(){
+    if(confirm('Czy na pewno chcesz usunąć to wydarzenie?'))
+        document.getElementById('deleteForm').submit();
+}
+
+/* ══════════════════════════════════════════════
+   11. Close modal on backdrop click
+══════════════════════════════════════════════ */
+window.onclick = e => {
+    if(e.target.classList.contains('modal-overlay'))
+        e.target.classList.remove('open');
+};
+
+/* ══════════════════════════════════════════════
+   12. Init
+══════════════════════════════════════════════ */
+window.addEventListener('DOMContentLoaded', () => {
+    layoutEvents();
+    updateWeekNumber();
+});
 </script>
 </body>
 </html>
