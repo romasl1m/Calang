@@ -4,8 +4,10 @@
 #include "functions.h"
 #include <vector>
 #include <ctime>
+#include <nlohmann/json.hpp>
 
 using namespace std;
+using json = nlohmann::json;
 
 string getCurrentYear(){
     time_t t = time(nullptr);
@@ -85,15 +87,35 @@ string process_terminal_command(const string& fullLine, const string& currentUse
             string end    = formatDateTime(args[2]);
             string desc   = args[3];
             string origin = args[4];
+
+            string resolved_origin = origin;
+            
+            if(origin != "private"){
+                bool found = false;
+                vector<json> groups = get_user_groups(currentUsername);
+                for(const auto& g : groups){
+                    if(g.value("name", "") == origin or g.value("id", "") == origin){
+                        resolved_origin = g.value("id", "");
+                        found = true;
+                        break;
+                    }
+                }
+                if(not found){
+                    output << "Error: Group '" << origin << "' not found or you are not a member.\n";
+                    return output.str();
+                }
+            }
+
             string id = to_string(time(0)) + "_" + to_string(rand()%1000);
-            string path = (origin == "private") ? "users/" + currentUsername + "/events.json" : "groups/" + origin + "/events.json";
-            add_new_event(title, id,start,end,currentUsername, desc, origin); 
+            
+            add_new_event(title, id, start, end, currentUsername, desc, resolved_origin); 
+            
             output << "An event created!\n"
                    << "-> Title: " << title << "\n"
                    << "-> Start: " << start << "\n"
                    << "-> End: "   << end << "\n"
                    << "-> Desc:   " << desc << "\n"
-                   << "-> Type:   " << origin << "\n";
+                   << "-> Type:   " << origin << " (ID: " << resolved_origin << ")\n";
         }
     }
     else {
@@ -138,4 +160,3 @@ void executeTerminal(){
         }
     }
 }
-
