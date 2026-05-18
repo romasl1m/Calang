@@ -1,5 +1,6 @@
 #include <crow.h>
 #include <string>
+#include "terminal.h"
 #include <filesystem>
 #include <fstream>
 #include "functions.h" 
@@ -130,5 +131,18 @@ void api_routes(crow::SimpleApp& app){
         fout.close();
 
         return crow::response(200, "Joined successfully");
+    });
+
+    CROW_ROUTE(app, "/api/terminal").methods("POST"_method)([](const crow::request& req){
+        string command = urlDecode(getParam(req.body, "command"));
+        string cookie_header = req.get_header_value("Cookie");
+        string user = get_logged_in_user(cookie_header);
+
+        if(user.empty()) return crow::response(401, "Unauthorized");
+
+        string output = process_terminal_command(command, user);
+        
+        json res_json = {{"output", output}};
+        return crow::response(200, res_json.dump());
     });
 }
