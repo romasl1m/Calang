@@ -1,5 +1,6 @@
 #include <crow.h>
 #include <string>
+#include <curl/curl.h>
 #include "terminal.h"
 #include <filesystem>
 #include <fstream>
@@ -9,7 +10,10 @@
 
 using namespace std;
 using json = nlohmann::json;
-
+size_t WriteCallback(void* contents, size_t size, size_t nmemb, void* userp){
+    ((string*)userp)->append((char*)contents, size * nmemb);
+    return size * nmemb;
+}
 void api_routes(crow::SimpleApp& app){
     CROW_ROUTE(app, "/api/new_event").methods("POST"_method)([](const crow::request& req){
         string title = urlDecode(getParam(req.body, "title"));
@@ -18,6 +22,8 @@ void api_routes(crow::SimpleApp& app){
         string description = urlDecode(getParam(req.body, "description"));
         string origin = urlDecode(getParam(req.body, "origin"));
         if(origin.empty()) origin = "private";
+        string recurrence = urlDecode(getParam(req.body, "recurrence"));
+        if(recurrence.empty()) recurrence = "none";
 
         string id = to_string(time(0)) + "_" + to_string(rand()%1000);
 
@@ -28,7 +34,7 @@ void api_routes(crow::SimpleApp& app){
             return crow::response(401, "Użytkownik nie zalogowany");
         }
 
-        add_new_event(title, id, start, end, user, description, origin);
+        add_new_event(title, id, start, end, user, description, origin, recurrence);
 
         crow::response res;
         res.code = 302;
@@ -39,6 +45,9 @@ void api_routes(crow::SimpleApp& app){
     CROW_ROUTE(app, "/api/delete_event").methods("POST"_method)([](const crow::request& req){
         string id = urlDecode(getParam(req.body, "id"));
         string origin = urlDecode(getParam(req.body, "origin")); 
+        string del_all_str = urlDecode(getParam(req.body, "delete_all"));
+        bool delete_all = (del_all_str == "true");
+
         if(origin.empty()) origin = "private";
 
         string cookie_header = req.get_header_value("Cookie");
@@ -47,7 +56,7 @@ void api_routes(crow::SimpleApp& app){
         if(user.empty())
             return crow::response(401, "Użytkownik nie zalogowany");
 
-        delete_event(id, user, origin);
+        delete_event(id, user, origin, delete_all);
 
         crow::response res;
         res.code = 302;
@@ -62,15 +71,17 @@ void api_routes(crow::SimpleApp& app){
         string end = urlDecode(getParam(req.body, "end"));
         string description = urlDecode(getParam(req.body, "description"));
         string origin = urlDecode(getParam(req.body, "origin"));
+        bool edit_all = getParam(req.body, "edit_all") == "true";
         if(origin.empty()) origin = "private";
-
+        string recurrence = urlDecode(getParam(req.body, "recurrence"));
+        if(recurrence.empty()) recurrence = "none";
         string cookie_header = req.get_header_value("Cookie");
         string user = get_logged_in_user(cookie_header);
 
         if(user.empty()) return crow::response(401, "Nie zalogowano");
 
-        delete_event(id, user, origin);
-        add_new_event(title, id, start, end, user, description, origin);
+        // ZAMIAST delete_event i add_new_event, wywołaj gotową funkcję:
+        edit_event(title, id, start, end, user, description, origin, recurrence, edit_all);
 
         crow::response res;
         res.code = 302;
@@ -144,5 +155,70 @@ void api_routes(crow::SimpleApp& app){
         
         json res_json = {{"output", output}};
         return crow::response(200, res_json.dump());
+    });
+    CROW_ROUTE(app, "/api/generate_command").methods("POST"_method)([](const crow::request& req){
+        crow::response res;
+        res.add_header("Content-Type", "application/json");
+
+        string prompt = urlDecode(getParam(req.body, "prompt"));
+        if(prompt.empty()){
+            res.code = 400;
+            res.body = json({{"error", "Prompt cannot be empty"}}).dump();
+            return res;
+        }
+
+        string api_key = "AIzaSyDfXAdgNGa2Rtcar-M3cIGS3i-VQhiq7b0"; 
+        string url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=" + api_key;
+
+        json openai_request = {
+            {"contents", {{
+                {"parts", {{
+                    // {"text", "Create a single Linux/Bash terminal command for the following request. Return ONLY the command as plain text. Do not use markdown, no explanations, no comments. The availible commands are: help, whoami, clear,  touch \"title\" \"start\" \"end\" \"desc\" \"origin\" creating an event in group named origin, date in format \"YYYY-MM-DD HH:MM\", cat {YYYY-MM-DD} checking what events are there. Request: " + prompt}
+                    {"text", "Create a single Linux/Bash terminal command for the following request. Return ONLY the command as plain text. Do not use markdown, no explanations, no comments. The availible commands are: help, whoami, clear, touch \"title\" \"start\" \"end\" \"desc\" \"origin\" \"T=recurrence\" (recurrence is optional: daily, weekly, monthly, yearly, default none). Request: " + prompt}
+                }}}
+            }}}
+        };
+
+        string request_data = openai_request.dump();
+        string response_data;
+
+        CURL* curl = curl_easy_init();
+        if(curl){
+            struct curl_slist* headers = nullptr;
+            headers = curl_slist_append(headers, "Content-Type: application/json");
+
+            curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
+            curl_easy_setopt(curl, CURLOPT_POSTFIELDS, request_data.c_str());
+            curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
+            curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
+            curl_easy_setopt(curl, CURLOPT_WRITEDATA, &response_data);
+
+            CURLcode cres = curl_easy_perform(curl);
+            curl_easy_cleanup(curl);
+            curl_slist_free_all(headers);
+
+            if(cres != CURLE_OK){
+                res.code = 500;
+                res.body = json({{"error", "Failed to contact AI API"}}).dump();
+                return res;
+            }
+        }
+
+        try{
+            json google_json = json::parse(response_data);
+            string generated_command = google_json["candidates"][0]["content"]["parts"][0]["text"];
+            
+            if(not generated_command.empty() and generated_command.back() == '\n'){
+                generated_command.pop_back();
+            }
+
+            res.code = 200;
+            res.body = json({{"command", generated_command}}).dump();
+            return res;
+        }catch(...){
+            res.code = 500;
+            res.body = json({{"error", "Failed to parse AI response"}}).dump();
+            return res;
+        }
     });
 }

@@ -12,15 +12,16 @@ struct Event {
     std::string user;
     std::string description;
     std::string origin;
+    std::string recurrence;
 
-    Event(std::string t, std::string i, std::string s, std::string e, std::string u, std::string d, std::string o)
-        : title(t), id(i), start(s), end(e), user(u), description(d), origin(o) {}
+    Event(std::string t, std::string i, std::string s, std::string e, std::string u, std::string d, std::string o, std::string r)
+        : title(t), id(i), start(s), end(e), user(u), description(d), origin(o), recurrence(r) {}
     
     Event() = default;
 };
 
 inline void to_json(json& j, const Event& e){
-    j = json{{"id", e.id}, {"title", e.title}, {"start", e.start}, {"end", e.end}, {"user", e.user}, {"description", e.description}, {"origin", e.origin}};
+    j = json{{"id", e.id}, {"title", e.title}, {"start", e.start}, {"end", e.end}, {"user", e.user}, {"description", e.description}, {"origin", e.origin}, {"recurrence", e.recurrence}};
 }
 
 inline void from_json(const json& j, Event& e){
@@ -31,6 +32,7 @@ inline void from_json(const json& j, Event& e){
     j.at("user").get_to(e.user);
     j.at("description").get_to(e.description);
     j.at("origin").get_to(e.origin);
+    j.at("recurrence").get_to(e.recurrence);
 }
 
 #endif

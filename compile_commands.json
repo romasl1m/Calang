@@ -1,0 +1,47 @@
+[
+  {
+    "directory": "/home/roman/calang",
+    "file": "/home/roman/calang/src/api.cpp",
+    "command": "/usr/bin/g++ -std=c++20 -I/home/roman/calang/include -c src/api.cpp -o Calang"
+  },
+  {
+    "directory": "/home/roman/calang",
+    "file": "/home/roman/calang/src/functions.cpp",
+    "command": "/usr/bin/g++ -std=c++20 -I/home/roman/calang/include -c src/functions.cpp -o Calang"
+  },
+  {
+    "directory": "/home/roman/calang",
+    "file": "/home/roman/calang/src/terminal.cpp",
+    "command": "/usr/bin/g++ -std=c++20 -I/home/roman/calang/include -c src/terminal.cpp -o Calang"
+  }
+  {
+    "directory": "/home/roman/calang",
+    "file": "/home/roman/calang/src/main.cpp",
+    "command": "/usr/bin/g++ -std=c++20 -I/home/roman/calang/include -c src/main.cpp -o Calang"
+  },
+  {
+    "directory": "/home/roman/calang",
+    "file": "/home/roman/calang/src/event.cpp",
+    "command": "/usr/bin/g++ -std=c++20 -I/home/roman/calang/include -c src/event.cpp -o Calang"
+  },
+  {
+    "directory": "/home/roman/calang",
+    "file": "/home/roman/calang/src/registration.cpp",
+    "command": "/usr/bin/g++ -std=c++20 -I/home/roman/calang/include -c src/registration.cpp -o Calang"
+  },
+  {
+    "directory": "/home/roman/calang",
+    "file": "/home/roman/calang/src/dashboard.cpp",
+    "command": "/usr/bin/g++ -std=c++20 -I/home/roman/calang/include -c src/dashboard.cpp -o Calang"
+  },
+  {
+    "directory": "/home/roman/calang",
+    "file": "/home/roman/calang/src/core_routes.cpp",
+    "command": "/usr/bin/g++ -std=c++20 -I/home/roman/calang/include -c src/core_routes.cpp -o Calang"
+  },
+  {
+    "directory": "/home/roman/calang",
+    "file": "/home/roman/calang/src/cookies.cpp",
+    "command": "/usr/bin/g++ -std=c++20 -I/home/roman/calang/include -c src/cookies.cpp -o Calang"
+  },
+]

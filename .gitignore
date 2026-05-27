@@ -3,3 +3,4 @@ app
 groups/
 users/
 users.json
+build/

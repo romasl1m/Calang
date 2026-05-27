@@ -1,10 +1,10 @@
 #include <iostream>
 #include <string>
 #include <sstream>
-#include "functions.h"
 #include <vector>
 #include <ctime>
 #include <nlohmann/json.hpp>
+#include "functions.h"
 
 using namespace std;
 using json = nlohmann::json;
@@ -87,7 +87,12 @@ string process_terminal_command(const string& fullLine, const string& currentUse
             string end    = formatDateTime(args[2]);
             string desc   = args[3];
             string origin = args[4];
-
+            string recurrence = "none";
+            for(size_t i = 5; i < args.size(); i++){
+                if(args[i].rfind("T=", 0) == 0){
+                    recurrence = args[i].substr(2);
+                }
+            }
             string resolved_origin = origin;
             
             if(origin != "private"){
@@ -108,14 +113,15 @@ string process_terminal_command(const string& fullLine, const string& currentUse
 
             string id = to_string(time(0)) + "_" + to_string(rand()%1000);
             
-            add_new_event(title, id, start, end, currentUsername, desc, resolved_origin); 
+            add_new_event(title, id, start, end, currentUsername, desc, resolved_origin, recurrence); 
             
             output << "An event created!\n"
                    << "-> Title: " << title << "\n"
                    << "-> Start: " << start << "\n"
                    << "-> End: "   << end << "\n"
                    << "-> Desc:   " << desc << "\n"
-                   << "-> Type:   " << origin << " (ID: " << resolved_origin << ")\n";
+                   << "-> Type:   " << origin << " (ID: " << resolved_origin << ")\n"
+                    << "-> Recur:  " << recurrence << "\n";
         }
     }
     else {
@@ -143,7 +149,8 @@ void executeTerminal(){
             #ifdef _WIN32
                 (void)system("cls");
             #else
-                (void)system("clear");
+                int result = system("clear");
+                (void)result; // Ucisza kompilator
             #endif
         }
         else if(cmd == "whoami"){

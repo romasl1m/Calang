@@ -31,19 +31,9 @@
             z-index: 10;
             overflow-y: auto;
         }
-        .logo {
-            font-size: 26px;
-            font-weight: 800;
-            padding: 24px;
-            text-align: center;
-            border-bottom: 1px solid rgba(255,255,255,0.1);
-            flex-shrink: 0;
-            cursor: pointer;
-        }
-
+        .logo { font-size: 26px; font-weight: 800; padding: 24px; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.1); flex-shrink: 0; cursor: pointer; }
         .sidebar-section { padding: 16px; border-bottom: 1px solid rgba(255,255,255,0.05); }
         .sidebar-section h3 { margin: 0 0 8px; font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: rgba(255,255,255,0.45); }
-
         .sidebar-menu { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
         .sidebar-menu li { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: 8px; font-size: 13px; font-weight: 500; cursor: pointer; transition: background 0.15s, color 0.15s; color: rgba(255,255,255,0.75); }
         .sidebar-menu li:hover { background: rgba(255,255,255,0.08); color: #fff; }
@@ -108,13 +98,14 @@
         .event-card.allday { background: #fef08a; border: 1px solid #eab308; border-left: 4px solid #ca8a04; display: flex; align-items: center; padding: 0 8px; }
         .event-card.allday .title { color: #854d0e; margin: 0; }
         .event-card .group-badge { display: inline-block; font-size: 10px; font-weight: 700; padding: 1px 5px; border-radius: 4px; background: rgba(59,130,246,0.15); color: var(--accent); margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
+        .event-card .recur-badge { display: inline-block; font-size: 10px; font-weight: 700; padding: 1px 5px; border-radius: 4px; background: rgba(16,185,129,0.15); color: #10b981; margin-top: 2px; }
 
         /* ── Modals ── */
         .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(15,23,42,0.6); align-items: center; justify-content: center; z-index: 999; padding: 16px; }
         .modal-overlay.open { display: flex; }
         .modal-box { background: var(--white); border-radius: 12px; width: 100%; max-width: 460px; overflow: hidden; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); }
         .modal-head { background: #f8fafc; padding: 18px 24px; font-weight: 700; border-bottom: 1px solid var(--border); font-size: 16px; }
-        .modal-body { padding: 24px; }
+        .modal-body { padding: 24px; max-height: 70vh; overflow-y: auto;}
         .form-group { margin-bottom: 16px; }
         .form-row { display: flex; gap: 12px; }
         .form-row .form-group { flex: 1; }
@@ -124,9 +115,13 @@
         .checkbox-group { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
         .checkbox-group input { width: 18px; height: 18px; cursor: pointer; }
         .checkbox-group label { margin: 0; cursor: pointer; font-size: 14px; font-weight: 500; color: var(--text); }
+        
+        .adv-toggle { cursor: pointer; color: var(--accent); font-size: 13px; font-weight: 700; display: inline-flex; align-items: center; gap: 4px; user-select: none; }
+        .adv-panel { display: none; margin-top: 10px; padding: 14px; background: #f1f5f9; border-radius: 8px; border: 1px solid var(--border); }
+        
         .detail-head { padding: 24px; border-bottom: 1px solid var(--border); background: #f8fafc; }
         .detail-head h2 { margin: 0 0 4px; font-size: 20px; font-weight: 800; color: #0f172a; }
-        .detail-body { padding: 20px 24px; }
+        .detail-body { padding: 20px 24px; max-height: 60vh; overflow-y: auto;}
         .detail-row { display: flex; gap: 14px; margin-bottom: 16px; align-items: flex-start; }
         .detail-icon { width: 32px; height: 32px; background: #f1f5f9; border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 14px; }
         .detail-info { flex: 1; }
@@ -140,6 +135,10 @@
         .btn-ghost { background: #fff; border: 1px solid #cbd5e1; padding: 10px 16px; border-radius: 8px; cursor: pointer; font-weight: 600; }
         .btn-delete { background: #fee2e2; border: 1px solid #fca5a5; color: #ef4444; padding: 10px 16px; border-radius: 8px; cursor: pointer; font-weight: 600; }
         .btn-delete:hover { background: #ef4444; color: #fff; }
+        .recur-check-row { display: none; width: 100%; align-items: center; gap: 8px; padding: 8px 12px; background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; margin-bottom: 6px; }
+        .recur-check-row input[type=checkbox] { width: 16px; height: 16px; cursor: pointer; accent-color: #f59e0b; flex-shrink: 0; }
+        .recur-check-row label { font-size: 13px; font-weight: 600; color: #92400e; cursor: pointer; user-select: none; }
+        .recur-check-row .recur-icon { font-size: 14px; }
         select.form-control { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2364748b' d='M6 8L1 3h10z'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 12px center; padding-right: 32px; cursor: pointer; }
 
         /* ── Ubuntu Terminal ── */
@@ -184,6 +183,19 @@
         </div>
 
         <div class="sidebar-forms">
+            <div class="group-form-block">
+                <label>Ask AI for command</label>
+                <div class="input-group" style="flex-direction: column; gap: 8px;">
+                    <input type="text" id="ai-prompt" placeholder="e.g., add event tomorrow" maxlength="150">
+                    <button onclick="generateAICommand()" id="ai-btn" style="width: 100%;">Generate Command</button>
+                </div>
+                <div id="ai-result-box" style="display: none; margin-top: 10px; padding: 8px; background: rgba(0,0,0,0.2); border-radius: 6px; border: 1px solid rgba(255,255,255,0.1);">
+                    <label style="font-size: 10px; color: #93c5fd; display: block; margin-bottom: 4px;">Generated Command:</label>
+                    <code id="ai-command-output" style="color: #6ee7b7; font-family: monospace; font-size: 12px; word-break: break-all; display: block; margin-bottom: 8px;"></code>
+                    <button onclick="runAICommand()" style="width: 100%; background: rgba(16,185,129,0.2); color: #6ee7b7; border-color: rgba(16,185,129,0.4);">Run in Terminal</button>
+                </div>
+            </div>
+
             <div class="group-form-block">
                 <label>New Group</label>
                 <div class="input-group">
@@ -236,7 +248,6 @@
         </div>
     </div>
 
-    <!-- TERMINAL WINDOW -->
     <div id="terminalWindow" class="terminal-window">
         <div class="terminal-header">
             <span>user@calang: ~</span>
@@ -253,7 +264,6 @@
     </div>
 </div>
 
-<!-- MODAL: New Event -->
 <div id="newModal" class="modal-overlay">
     <div class="modal-box">
         <div class="modal-head">New event</div>
@@ -301,6 +311,20 @@
                     <label>Description</label>
                     <textarea class="form-control" name="description" rows="3"></textarea>
                 </div>
+
+                <div class="form-group">
+                    <div class="adv-toggle" onclick="toggleAdvanced('n_adv_panel')">▶ Advanced Options</div>
+                    <div id="n_adv_panel" class="adv-panel">
+                        <label style="font-size: 11px; font-weight: 700; color: #64748b; margin-bottom: 6px; display:block;">Recurrence</label>
+                        <select class="form-control" name="recurrence" id="n_recurrence">
+                            <option value="none">None (One-time)</option>
+                            <option value="daily">Daily</option>
+                            <option value="weekly">Weekly</option>
+                            <option value="monthly">Monthly</option>
+                            <option value="yearly">Yearly</option>
+                        </select>
+                    </div>
+                </div>
             </div>
             <div class="modal-foot">
                 <button type="button" class="btn-ghost" onclick="closeNewModal()">Cancel</button>
@@ -310,7 +334,6 @@
     </div>
 </div>
 
-<!-- MODAL: Details / Edit -->
 <div id="detailModal" class="modal-overlay">
     <div class="modal-box">
         <form id="editForm" action="/api/edit_event" method="POST" onsubmit="prepareEditEventSubmit()">
@@ -318,6 +341,7 @@
             <input type="hidden" name="start" id="e_start_hidden">
             <input type="hidden" name="end"   id="e_end_hidden">
             <input type="hidden" name="origin" id="d-edit-origin">
+            <input type="hidden" name="edit_all" id="d-edit-all">
             <div class="detail-head">
                 <h2 id="d-title-view" class="view-span"></h2>
                 <input type="text" name="title" id="d-title-input" class="edit-input form-control" required>
@@ -352,7 +376,7 @@
                     <div class="detail-info">
                         <label>Visibility</label>
                         <span id="d-origin-view" class="view-span"></span>
-                        <select class="form-control edit-input" id="e_origin" name="origin">
+                        <select class="form-control edit-input" id="e_origin" name="origin" disabled>
                             <option value="private">Private</option>
                         </select>
                     </div>
@@ -366,19 +390,41 @@
                         <textarea name="description" id="d-desc-input" class="edit-input form-control" rows="3"></textarea>
                     </div>
                 </div>
+
+                <div class="detail-row edit-mode-only" style="flex-direction: column;">
+                    <div class="adv-toggle" onclick="toggleAdvanced('e_adv_panel')">▶ Advanced Options</div>
+                    <div id="e_adv_panel" class="adv-panel" style="width: 100%;">
+                        <label style="font-size: 11px; font-weight: 700; color: #64748b; margin-bottom: 6px; display:block;">Recurrence</label>
+                        <select class="form-control" name="recurrence" id="e_recurrence">
+                            <option value="none">None (One-time)</option>
+                            <option value="daily">Daily</option>
+                            <option value="weekly">Weekly</option>
+                            <option value="monthly">Monthly</option>
+                            <option value="yearly">Yearly</option>
+                        </select>
+                    </div>
+                </div>
             </div>
-            <div class="modal-foot">
-                <button type="button" class="btn-delete" onclick="submitDelete()">Delete</button>
-                <div style="flex:1"></div>
-                <button type="button" class="btn-ghost" onclick="closeDetailModal()">Close</button>
-                <button type="button" class="action-btn" id="editBtn" onclick="toggleEditMode(true)">Edit</button>
-                <button type="submit" class="action-btn" id="saveBtn" style="display:none">Save</button>
+            <div class="modal-foot" style="flex-direction: column; align-items: stretch; gap: 0;">
+                <div id="recur-check-row" class="recur-check-row">
+                    <span class="recur-icon">↺</span>
+                    <input type="checkbox" id="chk-all-recur">
+                    <label for="chk-all-recur" id="recur-check-label">Apply to all occurrences</label>
+                </div>
+                <div style="display:flex; gap:10px; justify-content:flex-end;">
+                    <button type="button" class="btn-delete" onclick="submitDelete()">Delete</button>
+                    <div style="flex:1"></div>
+                    <button type="button" class="btn-ghost" onclick="closeDetailModal()">Close</button>
+                    <button type="button" class="action-btn" id="editBtn" onclick="toggleEditMode(true)">Edit</button>
+                    <button type="submit" class="action-btn" id="saveBtn" style="display:none">Save</button>
+                </div>
             </div>
         </form>
 
         <form id="deleteForm" action="/api/delete_event" method="POST" style="display:none;">
-            <input type="hidden" name="id"     id="d-del-id">
-            <input type="hidden" name="origin" id="d-del-origin">
+            <input type="hidden" name="id"         id="d-del-id">
+            <input type="hidden" name="origin"     id="d-del-origin">
+            <input type="hidden" name="delete_all" id="d-del-all">
         </form>
     </div>
 </div>
@@ -466,10 +512,12 @@ function layoutEvents(){
             }
 
             const originVal = item.el.dataset.origin;
-            const groupBadge = (originVal && originVal !== 'private')
-                ? `<span class="group-badge">Group: ${originVal}</span>` : '';
+            const recurVal = item.el.dataset.recurrence;
+            
+            const groupBadge = (originVal && originVal !== 'private') ? `<span class="group-badge">Group: ${originVal}</span>` : '';
+            const recurBadge = (recurVal && recurVal !== 'none') ? `<span class="recur-badge">↺ ${recurVal}</span>` : '';
 
-            item.el.innerHTML = `<span class="time">${item.sStr.substring(0,5)}</span><div class="title">${item.title}</div>${groupBadge}`;
+            item.el.innerHTML = `<span class="time">${item.sStr.substring(0,5)}</span><div class="title">${item.title}</div>${groupBadge} ${recurBadge}`;
             item.el.onclick = () => openDetailModal(item.el);
 
             activeEvents.push(item);
@@ -502,8 +550,12 @@ function switchView(viewName){
     window.location.search = params.toString();
 }
 
-let cachedGroups = [];
+function toggleAdvanced(panelId){
+    const panel = document.getElementById(panelId);
+    panel.style.display = panel.style.display === 'none' || panel.style.display === '' ? 'block' : 'none';
+}
 
+let cachedGroups = [];
 function loadGroups(){
     fetch("/api/my_groups")
     .then(res => res.json())
@@ -590,6 +642,7 @@ function toggleAllDay(checkbox, timeRowId){
 function openNewModal(){
     document.getElementById('newEventForm').reset();
     document.getElementById('n_time_row').style.opacity = '1';
+    document.getElementById('n_adv_panel').style.display = 'none';
     
     const originSelect = document.getElementById("n_origin");
     if(originSelect){
@@ -639,7 +692,11 @@ function openDetailModal(card){
 
     document.getElementById('d-title-view').textContent   = d.title || '';
     document.getElementById('d-user').textContent         = d.user  || '';
-    document.getElementById('d-time-view').textContent    = isAllDay ? 'All day' : `${startDate} | ${startTime} - ${endTime}`;
+    
+    let timeText = isAllDay ? 'All day' : `${startDate} | ${startTime} - ${endTime}`;
+    if(d.recurrence && d.recurrence !== 'none') timeText += ` (↺ ${d.recurrence})`;
+    document.getElementById('d-time-view').textContent    = timeText;
+    
     document.getElementById('d-desc').textContent         = d.description || 'No description';
     document.getElementById('d-origin-view').textContent  = originLabel;
 
@@ -647,8 +704,14 @@ function openDetailModal(card){
     document.getElementById('e_date').value        = startDate;
     document.getElementById('e_start').value       = startTime;
     document.getElementById('e_end').value         = endTime;
-    document.getElementById('e_origin').value      = originVal;
+    
+    const e_origin = document.getElementById('e_origin');
+    e_origin.innerHTML = `<option value="${originVal}">${originLabel}</option>`;
+    e_origin.value = originVal;
+    
     document.getElementById('d-desc-input').value  = d.description || '';
+    document.getElementById('e_recurrence').value  = d.recurrence || 'none';
+    document.getElementById('e_adv_panel').style.display = 'none';
 
     const alldayChk = document.getElementById('e_allday');
     alldayChk.checked = isAllDay;
@@ -657,6 +720,14 @@ function openDetailModal(card){
     document.getElementById('d-edit-id').value    = d.id;
     document.getElementById('d-del-id').value     = d.id;
     document.getElementById('d-del-origin').value = originVal;
+    document.getElementById('d-edit-origin').value = originVal;
+
+    // Show recurring checkbox only for recurring events
+    const isRecurring = d.recurrence && d.recurrence !== 'none' && d.recurrence !== '';
+    const row = document.getElementById('recur-check-row');
+    row.style.display = isRecurring ? 'flex' : 'none';
+    document.getElementById('chk-all-recur').checked = false;
+    document.getElementById('recur-check-label').textContent = 'Delete all occurrences';
 
     toggleEditMode(false);
     document.getElementById('detailModal').classList.add('open');
@@ -667,6 +738,9 @@ function prepareEditEventSubmit(){
     const isAllDay = document.getElementById('e_allday').checked;
     document.getElementById('e_start_hidden').value = date + ' ' + (isAllDay ? '00:00' : document.getElementById('e_start').value);
     document.getElementById('e_end_hidden').value   = date + ' ' + (isAllDay ? '23:59' : document.getElementById('e_end').value);
+    const isRecurring = document.getElementById('recur-check-row').style.display !== 'none';
+    const editAll     = isRecurring && document.getElementById('chk-all-recur').checked;
+    document.getElementById('d-edit-all').value = editAll ? 'true' : 'false';
 }
 
 function toggleEditMode(on){
@@ -674,13 +748,25 @@ function toggleEditMode(on){
     on ? modal.classList.add('edit-mode') : modal.classList.remove('edit-mode');
     document.getElementById('editBtn').style.display = on ? 'none'         : 'inline-block';
     document.getElementById('saveBtn').style.display = on ? 'inline-block' : 'none';
+    // Swap checkbox label between delete/edit context
+    const lbl = document.getElementById('recur-check-label');
+    if(lbl) lbl.textContent = on ? 'Edit all occurrences' : 'Delete all occurrences';
+    // Uncheck on mode switch to avoid accidental mass edits
+    const chk = document.getElementById('chk-all-recur');
+    if(chk) chk.checked = false;
 }
 
 function closeDetailModal(){ document.getElementById('detailModal').classList.remove('open'); }
 
 function submitDelete(){
-    if(confirm('Are you sure you want to delete this event?'))
-        document.getElementById('deleteForm').submit();
+    const isRecurring = document.getElementById('recur-check-row').style.display !== 'none';
+    const deleteAll   = isRecurring && document.getElementById('chk-all-recur').checked;
+    const msg = deleteAll
+        ? 'Delete ALL occurrences of this recurring event?'
+        : 'Delete this event?';
+    if(!confirm(msg)) return;
+    document.getElementById('d-del-all').value = deleteAll ? 'true' : 'false';
+    document.getElementById('deleteForm').submit();
 }
 
 window.onclick = e => {
@@ -688,9 +774,6 @@ window.onclick = e => {
         e.target.classList.remove('open');
 };
 
-/* ══════════════════════════════════════════════
-   13. Terminal Logic
-══════════════════════════════════════════════ */
 function toggleTerminal(){
     const t = document.getElementById('terminalWindow');
     if(t.style.display === 'flex'){
@@ -724,7 +807,7 @@ document.getElementById('termInput').addEventListener('keydown', function(e){
         .then(r => r.json())
         .then(data => {
             if(data.output) printToTerminal(data.output, false);
-            if(cmd.startsWith('touch')) location.reload(); // Reload for new event
+            if(cmd.startsWith('touch')) location.reload();
         })
         .catch(() => printToTerminal('Error executing command', false));
     }
@@ -760,7 +843,66 @@ function printToTerminal(text, isCommand){
     out.scrollTop = out.scrollHeight;
 }
 
-/* Init */
+function generateAICommand(){
+    const promptInput = document.getElementById('ai-prompt');
+    const btn = document.getElementById('ai-btn');
+    const resultBox = document.getElementById('ai-result-box');
+    const output = document.getElementById('ai-command-output');
+    
+    const promptText = promptInput.value.trim();
+    if(!promptText) return;
+
+    btn.disabled = true;
+    btn.textContent = 'Generating...';
+    resultBox.style.display = 'none';
+
+    fetch('/api/generate_command', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: 'prompt=' + encodeURIComponent(promptText)
+    })
+    .then(res => res.json())
+    .then(data => {
+        if(data.command){
+            output.textContent = data.command;
+            resultBox.style.display = 'block';
+        } else if(data.error){
+            alert('AI Error: ' + data.error);
+        }
+    })
+    .catch(err => {
+        alert('Failed to generate command.');
+    })
+    .finally(() => {
+        btn.disabled = false;
+        btn.textContent = 'Generate Command';
+    });
+}
+
+function runAICommand(){
+    const cmd = document.getElementById('ai-command-output').textContent;
+    if(!cmd) return;
+    
+    const t = document.getElementById('terminalWindow');
+    if(t.style.display !== 'flex'){
+        t.style.display = 'flex';
+    }
+    
+    printToTerminal(`user@calang:~$ ${cmd}`, true);
+
+    fetch('/api/terminal', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+        body: 'command=' + encodeURIComponent(cmd)
+    })
+    .then(r => r.json())
+    .then(data => {
+        if(data.output) printToTerminal(data.output, false);
+        if(cmd.startsWith('touch')) location.reload();
+    })
+    .catch(() => printToTerminal('Error executing command', false));
+}
+
 window.addEventListener('DOMContentLoaded', () => {
     layoutEvents();
     updateWeekNumber();

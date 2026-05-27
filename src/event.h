@@ -14,28 +14,27 @@ struct Event {
     std::string user;
     std::string description;
     std::string origin;
+    std::string recurrence;
 
-    // Konstruktor
-    Event(std::string t, std::string i, std::string s, std::string e, std::string u, std::string d, std::string o)
-        : title(t), id(i), start(s), end(e), user(u), description(d), origin(o) {}
+    Event(std::string t, std::string i, std::string s, std::string e, std::string u, std::string d, std::string o, std::string r)
+        : title(t), id(i), start(s), end(e), user(u), description(d), origin(o), recurrence(r) {}
     
-    // Pusty konstruktor (wymagany przez niektóre operacje nlohmann::json)
     Event() = default;
 };
 
-// Używamy inline, aby uniknąć błędów multiple definition
 inline void to_json(json& j, const Event& e){
-    j = json{{"id", e.id}, {"title", e.title}, {"start", e.start}, {"end", e.end}, {"user", e.user}, {"description", e.description}, {"origin", e.origin}};
+    j = json{{"id", e.id}, {"title", e.title}, {"start", e.start}, {"end", e.end}, {"user", e.user}, {"description", e.description}, {"origin", e.origin}, {"recurrence", e.recurrence}};
 }
 
 inline void from_json(const json& j, Event& e){
-    j.at("id").get_to(e.id);
-    j.at("title").get_to(e.title);
-    j.at("start").get_to(e.start);
-    j.at("end").get_to(e.end);
-    j.at("user").get_to(e.user);
-    j.at("description").get_to(e.description);
-    j.at("origin").get_to(e.origin);
+    e.id = j.value("id", "");
+    e.title = j.value("title", "");
+    e.start = j.value("start", "");
+    e.end = j.value("end", "");
+    e.user = j.value("user", "");
+    e.description = j.value("description", "");
+    e.origin = j.value("origin", "private");
+    e.recurrence = j.value("recurrence", "none");
 }
 
 #endif
