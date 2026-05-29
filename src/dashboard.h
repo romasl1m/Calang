@@ -1,3 +1,3 @@
 #pragma once
-#include <crow.h>
-void dashboard(crow::SimpleApp& app);
+#include <crow/app.h>
+void dashboard(crow::SimpleApp &app);

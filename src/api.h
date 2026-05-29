@@ -1,4 +1,4 @@
 #pragma once
-#include <crow.h>
+#include <crow/app.h>
 
-void api_routes(crow::SimpleApp& app);
+void api_routes(crow::SimpleApp &app);

@@ -1,3 +1,3 @@
 #pragma once
-#include <crow.h>
-void register_auth_routes(crow::SimpleApp& app);
+#include <crow/app.h>
+void register_auth_routes(crow::SimpleApp &app);
