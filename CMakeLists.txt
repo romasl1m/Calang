@@ -21,7 +21,7 @@ add_executable(calang
 # target_include_directories(calang PRIVATE src)
 target_include_directories(calang PRIVATE
     src
-    external/crow
+    external
 )
 
 target_link_libraries(calang pthread curl)

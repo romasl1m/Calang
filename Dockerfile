@@ -6,6 +6,10 @@ RUN apt update && apt install -y \
     make \
     libcurl4-openssl-dev
 
+RUN apt-get update && apt-get install -y \
+    libasio-dev \
+    nlohmann-json3-dev \
+    libcurl4-openssl-dev
 WORKDIR /app
 
 COPY . .
