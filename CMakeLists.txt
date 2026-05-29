@@ -18,6 +18,10 @@ add_executable(calang
     src/terminal.cpp
 )
 
-target_include_directories(calang PRIVATE src)
+# target_include_directories(calang PRIVATE src)
+target_include_directories(calang PRIVATE
+    src
+    external/crow
+)
 
 target_link_libraries(calang pthread curl)
