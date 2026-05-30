@@ -202,7 +202,7 @@ void api_routes(crow::SimpleApp &app) {
         string url = "https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=" + api_key;
 
         json openai_request;
-        string sys_prompt = "Create a single Linux/Bash terminal command for the following request. Return ONLY the command as plain text. Do not use markdown, no explanations, no comments. The available commands are: help, whoami, clear, touch \"title\" \"start\" \"end\" \"desc\" \"origin\" \"T=recurrence\" (recurrence is optional: daily, weekly, monthly, yearly, default none). Request: " + prompt;
+        string sys_prompt = "Create a single Linux/Bash terminal command for the following request. Return ONLY the command as plain text. Do not use markdown, no explanations, no comments. The available commands are: help, whoami, clear, touch \"event name\" DD.MM HH:MM HH:MM \"description\" \"origin\" \"T=recurrence\" (recurrence is optional: daily, weekly, monthly, yearly, default none). Request: " + prompt;
 
         openai_request["contents"][0]["parts"][0]["text"] = sys_prompt;
 

@@ -45,6 +45,17 @@ string formatDateTime(const string& rawDateTime){
     return rawDateTime; 
 }
 
+string parseAndFormatDateTime(const string& dateStr, const string& timeStr) {
+    int day = 0, month = 0;
+    char dot = 0;
+    if (sscanf(dateStr.c_str(), "%d%c%d", &day, &dot, &month) == 3 && dot == '.') {
+        char buf[64];
+        snprintf(buf, sizeof(buf), "%s-%02d-%02d %s", getCurrentYear().c_str(), month, day, timeStr.c_str());
+        return string(buf);
+    }
+    return dateStr + " " + timeStr;
+}
+
 string process_terminal_command(const string& fullLine, const string& currentUsername){
     if(fullLine.empty()) return "";
 
@@ -63,7 +74,7 @@ string process_terminal_command(const string& fullLine, const string& currentUse
     else if(cmd == "help"){
         output << "Available commands:\n"
                << "  cat {YYYY-MM-DD}\n"
-               << "  touch \"title\" \"start\" \"end\" \"desc\" \"origin\"\n"
+               << "  touch \"event name\" DD.MM HH:MM HH:MM \"description\" \"origin\"\n"
                << "  clear\n"
                << "  whoami\n";
     }
@@ -79,16 +90,16 @@ string process_terminal_command(const string& fullLine, const string& currentUse
         string remaining;
         getline(ss, remaining);
         vector<string> args = parseArguments(remaining);
-        if(args.size() < 5){
-            output << "Syntax error. Correct usage of 'touch':\n  touch \"title\" \"start\" \"end\" \"desc\" \"origin\"\n";
+        if(args.size() < 6){
+            output << "Syntax error. Correct usage of 'touch':\n  touch \"event name\" DD.MM HH:MM HH:MM \"description\" \"origin\"\n";
         } else {
             string title  = args[0];
-            string start  = formatDateTime(args[1]);
-            string end    = formatDateTime(args[2]);
-            string desc   = args[3];
-            string origin = args[4];
+            string start  = parseAndFormatDateTime(args[1], args[2]);
+            string end    = parseAndFormatDateTime(args[1], args[3]);
+            string desc   = args[4];
+            string origin = args[5];
             string recurrence = "none";
-            for(size_t i = 5; i < args.size(); i++){
+            for(size_t i = 6; i < args.size(); i++){
                 if(args[i].rfind("T=", 0) == 0){
                     recurrence = args[i].substr(2);
                 }
@@ -160,10 +171,11 @@ void executeTerminal(){
             break;
         }
         else if(cmd == "help"){
-            cout << "Available commands:\n  cat {YYYY-MM-DD}\n  touch \"title\" \"start\" \"end\" \"desc\" \"origin\"\n  clear\n  whoami" << endl;
+            cout << "Available commands:\n  cat {YYYY-MM-DD}\n  touch \"event name\" DD.MM HH:MM HH:MM \"description\" \"origin\"\n  clear\n  whoami" << endl;
         }
         else {
             cout << process_terminal_command(line, username);
         }
     }
 }
+

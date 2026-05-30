@@ -1,87 +1,358 @@
 <!DOCTYPE html>
-<html>
+<html lang="pl">
 <head>
     <meta charset="UTF-8">
-    <title>Rejestracja</title>
+    <title>Calang - Rejestracja</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
+        :root {
+            --bg:          #07080e;
+            --surface:     #0c0e18;
+            --card:        #10121e;
+            --border:      rgba(255,255,255,0.07);
+            --accent:      #00d4b4;
+            --accent-dim:  rgba(0,212,180,0.1);
+            --accent-glow: 0 0 14px rgba(0,212,180,0.35);
+            --accent-2:    #4f5ef0;
+            --text:        #c4d3ee;
+            --text-mid:    #6070a0;
+            --text-dim:    #303d52;
+            --danger:      #e8415a;
+            --success:     #1fc87a;
+        }
+
+        *, *::before, *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #f4f7f6;
+            font-family: 'Outfit', system-ui, sans-serif;
+            background: radial-gradient(circle at 50% 50%, #10152d 0%, #07080e 100%);
             margin: 0;
             display: flex;
             justify-content: center;
             align-items: center;
-            height: 100vh;
+            min-height: 100vh;
+            color: var(--text);
+            overflow-x: hidden;
+            position: relative;
         }
+
+        /* Subtle grid background */
+        body::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-image: 
+                linear-gradient(rgba(255, 255, 255, 0.015) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 255, 255, 0.015) 1px, transparent 1px);
+            background-size: 30px 30px;
+            background-position: center;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        /* Glowing backdrops */
+        .glow-orb {
+            position: absolute;
+            width: 400px;
+            height: 400px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(0, 212, 180, 0.07) 0%, transparent 70%);
+            top: -100px;
+            right: -100px;
+            z-index: 2;
+            pointer-events: none;
+            filter: blur(50px);
+        }
+
+        .glow-orb-2 {
+            position: absolute;
+            width: 400px;
+            height: 400px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(79, 94, 240, 0.07) 0%, transparent 70%);
+            bottom: -150px;
+            left: -150px;
+            z-index: 2;
+            pointer-events: none;
+            filter: blur(50px);
+        }
+
         .container {
+            width: 100%;
+            max-width: 400px;
+            padding: 20px;
+            z-index: 10;
+            animation: fadeInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(16px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .card {
+            background: rgba(16, 18, 30, 0.8);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 40px 32px 32px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4), 
+                        inset 0 1px 0 rgba(255, 255, 255, 0.05);
+            position: relative;
+            overflow: hidden;
+            text-align: center;
+        }
+
+        /* Top glowing line */
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, var(--accent) 0%, var(--accent-2) 100%);
+        }
+
+        .logo-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 24px;
+        }
+
+        .logo {
+            font-size: 26px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+            color: var(--accent);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            text-shadow: var(--accent-glow);
+        }
+
+        .logo-pulse {
+            width: 9px; height: 9px;
+            border-radius: 50%;
+            background: var(--accent);
+            box-shadow: var(--accent-glow);
+            flex-shrink: 0;
+            animation: pulse 2.4s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.4; transform: scale(0.9); }
+        }
+
+        h2 {
+            font-size: 20px;
+            font-weight: 600;
+            color: var(--text);
+            margin-bottom: 28px;
+            letter-spacing: -0.2px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
             display: flex;
             flex-direction: column;
-            gap: 20px;
-            width: 100%;
-            max-width: 350px;
-        }
-        .box {
-            background-color: white;
-            padding: 30px;
-            border-radius: 12px;
-            box-shadow: 0 8px 24px rgba(0,0,0,0.08);
-            text-align: center;
-            border-top: 5px solid #1a365d;
-        }
-        h2, h3 { color: #1a365d; margin-top: 0; }
-        label { display: block; text-align: left; margin-bottom: 5px; color: #555; font-size: 14px; font-weight: bold; }
-        input {
-            width: 100%;
-            padding: 10px;
-            margin-bottom: 20px;
-            border: 1px solid #ccc;
-            border-radius: 6px;
-            box-sizing: border-box;
-            font-size: 14px;
-        }
-        input:focus { outline: none; border-color: #1a365d; }
-        .error-input {
-            border-color: red !important;
-        }
-        .error-message {
-            color: red;
-            font-size: 13px;
-            margin-top: -10px;
-            margin-bottom: 15px;
+            gap: 6px;
             text-align: left;
         }
+
+        label {
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--text-mid);
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            padding-left: 2px;
+        }
+
+        input {
+            width: 100%;
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 12px 16px;
+            color: var(--text);
+            font-size: 14px;
+            font-family: inherit;
+            outline: none;
+            transition: all 0.2s ease;
+        }
+
+        input::placeholder {
+            color: var(--text-dim);
+        }
+
+        input:hover {
+            border-color: rgba(255, 255, 255, 0.15);
+            background: rgba(255, 255, 255, 0.04);
+        }
+
+        input:focus {
+            border-color: var(--accent);
+            background: rgba(0, 212, 180, 0.02);
+            box-shadow: 0 0 0 3px rgba(0, 212, 180, 0.15);
+        }
+
+        .error-input {
+            border-color: var(--danger) !important;
+            background: rgba(232, 65, 90, 0.03) !important;
+        }
+
+        .error-input:focus {
+            box-shadow: 0 0 0 3px rgba(232, 65, 90, 0.15) !important;
+        }
+
+        .error-container {
+            background: rgba(232, 65, 90, 0.08);
+            border: 1px solid rgba(232, 65, 90, 0.2);
+            border-radius: 8px;
+            padding: 12px 14px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: var(--danger);
+            font-size: 13.5px;
+            text-align: left;
+            animation: shake 0.4s ease-in-out;
+            line-height: 1.4;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            20%, 60% { transform: translateX(-6px); }
+            40%, 80% { transform: translateX(6px); }
+        }
+
         button {
             width: 100%;
-            padding: 12px;
-            background-color: #1a365d;
-            color: white;
+            padding: 13px;
+            background: linear-gradient(135deg, var(--accent) 0%, #00b398 100%);
+            color: #05060b;
             border: none;
-            border-radius: 6px;
+            border-radius: 8px;
             cursor: pointer;
-            font-size: 16px;
-            font-weight: bold;
-            transition: background-color 0.3s;
+            font-size: 14px;
+            font-weight: 600;
+            font-family: inherit;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 12px rgba(0, 212, 180, 0.2);
+            margin-top: 8px;
         }
-        button:hover { background-color: #122643; }
-        .btn-secondary { background-color: #ffffff; color: #1a365d; border: 1px solid #1a365d; }
-        .btn-secondary:hover { background-color: #f0f4f8; }
+
+        button:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 16px rgba(0, 212, 180, 0.35);
+            background: linear-gradient(135deg, #05ebd7 0%, var(--accent) 100%);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        .divider {
+            height: 1px;
+            background: var(--border);
+            margin: 28px 0 20px;
+            position: relative;
+        }
+
+        .divider::after {
+            content: 'lub';
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            background: #10121e;
+            padding: 0 12px;
+            color: var(--text-dim);
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .secondary-prompt {
+            font-size: 13px;
+            color: var(--text-mid);
+            margin-bottom: 14px;
+        }
+
+        .btn-secondary {
+            background: transparent;
+            color: var(--text);
+            border: 1px solid var(--border);
+            box-shadow: none;
+            margin-top: 0;
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.04);
+            border-color: var(--text-mid);
+            color: var(--text);
+            box-shadow: none;
+            transform: translateY(-1px);
+        }
+
+        .btn-secondary:active {
+            transform: translateY(0);
+        }
     </style>
 </head>
 <body>
+    <div class="glow-orb"></div>
+    <div class="glow-orb-2"></div>
+    
     <div class="container">
-        <div class="box">
-            <h2>Rejestracja</h2>
+        <div class="card">
+            <div class="logo-container">
+                <div class="logo">
+                    <span class="logo-pulse"></span>
+                    Calang
+                </div>
+            </div>
+            
+            <h2>Zarejestruj się</h2>
+            
+            <div class="error-container">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                <span>{{error_msg}}</span>
+            </div>
+
             <form action="/register" method="POST">
-                <label>Login:</label>
-                <input type="text" name="username" class="error-input" value="{{username}}" required>
-                <label>Hasło:</label>
-                <input type="password" name="password" required>
-                <div class="error-message">{{error_msg}}</div>
+                <div class="form-group">
+                    <label for="username">Login</label>
+                    <input type="text" id="username" name="username" class="error-input" value="{{username}}" placeholder="Wybierz swój login" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="password">Hasło</label>
+                    <input type="password" id="password" name="password" placeholder="Wybierz silne hasło" required>
+                </div>
+                
                 <button type="submit">Zarejestruj się</button>
             </form>
-        </div>
-        <div class="box">
-            <h3>Masz już konto?</h3>
+            
+            <div class="divider"></div>
+            
+            <div class="secondary-prompt">Masz już konto?</div>
             <form action="/" method="GET">
                 <button class="btn-secondary" type="submit">Wróć do logowania</button>
             </form>
