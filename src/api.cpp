@@ -31,6 +31,9 @@ void api_routes(crow::SimpleApp &app) {
         string recurrence = urlDecode(getParam(req.body, "recurrence"));
         if (recurrence.empty())
             recurrence = "none";
+        string priority = urlDecode(getParam(req.body, "priority"));
+        if (priority.empty())
+            priority = "medium";
 
         string id = to_string(time(0)) + "_" + to_string(rand() % 1000);
 
@@ -41,7 +44,7 @@ void api_routes(crow::SimpleApp &app) {
             return crow::response(401, "Użytkownik nie zalogowany");
         }
 
-        add_new_event(title, id, start, end, user, description, origin, recurrence);
+        add_new_event(title, id, start, end, user, description, origin, recurrence, "", priority);
 
         crow::response res;
         res.code = 302;
@@ -85,13 +88,16 @@ void api_routes(crow::SimpleApp &app) {
         string recurrence = urlDecode(getParam(req.body, "recurrence"));
         if (recurrence.empty())
             recurrence = "none";
+        string priority = urlDecode(getParam(req.body, "priority"));
+        if (priority.empty())
+            priority = "medium";
         string cookie_header = req.get_header_value("Cookie");
         string user = get_logged_in_user(cookie_header);
 
         if (user.empty())
             return crow::response(401, "Nie zalogowano");
 
-        edit_event(title, id, start, end, user, description, origin, recurrence, edit_all);
+        edit_event(title, id, start, end, user, description, origin, recurrence, edit_all, priority);
 
         crow::response res;
         res.code = 302;

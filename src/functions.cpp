@@ -88,7 +88,7 @@ void join_group(const string &username, const string &group_id) {
     fout << members.dump(4);
 }
 
-void add_new_event(const string &title, const string &id, const string &start, const string &end, const string &user, const string &description, const string &origin, const string &recurrence) {
+void add_new_event(const string &title, const string &id, const string &start, const string &end, const string &user, const string &description, const string &origin, const string &recurrence, const string &recurrence_id, const string &priority) {
     string path = (origin == "private") ? "users/" + user + "/events.json" : "groups/" + origin + "/events.json";
 
     filesystem::path p(path);
@@ -167,6 +167,7 @@ void add_new_event(const string &title, const string &id, const string &start, c
             strftime(buf_e, sizeof(buf_e), "%Y-%m-%d %H:%M", format_e);
 
         string instance_id = id;
+        string rec_id = recurrence_id.empty() ? id : recurrence_id;
         if (recurrence != "none" and not recurrence.empty()) {
             instance_id = id + "_" + to_string(i);
         }
@@ -180,7 +181,8 @@ void add_new_event(const string &title, const string &id, const string &start, c
             {"description", description},
             {"origin", origin},
             {"recurrence", recurrence},
-            {"recurrence_id", id}};
+            {"recurrence_id", rec_id},
+            {"priority", priority}};
         data.push_back(new_ev);
     }
 
@@ -221,7 +223,7 @@ void delete_event(const string &id, const string &user, const string &origin, bo
     fout << filtered.dump(4);
     fout.close();
 }
-void edit_event(const string &title, const string &id, const string &start, const string &end, const string &user, const string &description, const string &origin, const string &recurrence, bool edit_all) {
+void edit_event(const string &title, const string &id, const string &start, const string &end, const string &user, const string &description, const string &origin, const string &recurrence, bool edit_all, const string &priority) {
     string path = (origin == "private") ? "users/" + user + "/events.json" : "groups/" + origin + "/events.json";
     if (not filesystem::exists(path))
         return;
@@ -259,7 +261,7 @@ void edit_event(const string &title, const string &id, const string &start, cons
         fout.close();
 
         string new_base_id = to_string(time(0)) + "_" + to_string(rand() % 1000);
-        add_new_event(title, new_base_id, start, end, user, description, origin, recurrence);
+        add_new_event(title, new_base_id, start, end, user, description, origin, recurrence, "", priority);
         return;
     }
 
@@ -271,6 +273,7 @@ void edit_event(const string &title, const string &id, const string &start, cons
             item["end"] = end;
             item["description"] = description;
             item["recurrence"] = recurrence;
+            item["priority"] = priority;
             updated = true;
             break;
         }
@@ -321,7 +324,8 @@ vector<Event> get_user_event(const string &username) {
             item.value("user", ""), item.value("description", ""),
             item.value("origin", "private"),
             item.value("recurrence", "none"),
-            item.value("recurrence_id", ""));
+            item.value("recurrence_id", ""),
+            item.value("priority", "medium"));
     }
     return events;
 }
@@ -341,7 +345,8 @@ void get_group_events(const json &g, vector<Event> &events) {
         events.emplace_back(item.value("title", ""), item.value("id", ""),
                             item.value("start", ""), item.value("end", ""),
                             item.value("user", ""), item.value("description", ""),
-                            g_id, item.value("recurrence", "none"), item.value("recurrence_id", ""));
+                            g_id, item.value("recurrence", "none"), item.value("recurrence_id", ""),
+                            item.value("priority", "medium"));
     }
 }
 vector<Event> get_all_events(const string &username) {
@@ -371,4 +376,86 @@ string loadHtmlTemplate(const string &filePath) {
     stringstream buffer;
     buffer << file.rdbuf();
     return buffer.str();
+}
+
+bool change_event_group(const string &event_id, const string &new_origin) {
+    vector<string> search_paths = {"users"};
+    if (filesystem::exists("groups")) {
+        for (const auto &entry : filesystem::directory_iterator("groups")) {
+            search_paths.push_back("groups/" + entry.path().filename().string());
+        }
+    }
+
+    Event found_event;
+    string old_path;
+    bool event_found = false;
+
+    for (const auto &base : search_paths) {
+        string events_path;
+        if (base == "users") {
+            for (const auto &user_dir : filesystem::directory_iterator(base)) {
+                events_path = user_dir.path().string() + "/events.json";
+                if (not filesystem::exists(events_path)) continue;
+
+                ifstream fin(events_path);
+                json data;
+                fin >> data;
+                fin.close();
+
+                for (const auto &item : data) {
+                    if (item.value("id", "") == event_id) {
+                        found_event = Event(
+                            item.value("title", ""), item.value("id", ""),
+                            item.value("start", ""), item.value("end", ""),
+                            item.value("user", ""), item.value("description", ""),
+                            item.value("origin", "private"),
+                            item.value("recurrence", "none"),
+                            item.value("recurrence_id", ""),
+                            item.value("priority", "medium")
+                        );
+                        old_path = events_path;
+                        event_found = true;
+                        break;
+                    }
+                }
+                if (event_found) break;
+            }
+        } else {
+            events_path = base + "/events.json";
+            if (not filesystem::exists(events_path)) continue;
+
+            ifstream fin(events_path);
+            json data;
+            fin >> data;
+            fin.close();
+
+            for (const auto &item : data) {
+                if (item.value("id", "") == event_id) {
+                    found_event = Event(
+                        item.value("title", ""), item.value("id", ""),
+                        item.value("start", ""), item.value("end", ""),
+                        item.value("user", ""), item.value("description", ""),
+                        item.value("origin", ""),
+                        item.value("recurrence", "none"),
+                        item.value("recurrence_id", ""),
+                        item.value("priority", "medium")
+                    );
+                    old_path = events_path;
+                    event_found = true;
+                    break;
+                }
+            }
+        }
+        if (event_found) break;
+    }
+
+    if (not event_found) return false;
+
+    delete_event(event_id, found_event.user, found_event.origin, false);
+
+    add_new_event(found_event.title, found_event.id, found_event.start, found_event.end,
+                  found_event.user, found_event.description, new_origin,
+                  found_event.recurrence, found_event.recurrence_id, found_event.priority);
+
+    return true;
 }
