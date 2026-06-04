@@ -44,7 +44,8 @@ void api_routes(crow::SimpleApp &app) {
             return crow::response(401, "Użytkownik nie zalogowany");
         }
 
-        add_new_event(title, id, start, end, user, description, origin, recurrence, "", priority);
+        string subgroup = urlDecode(getParam(req.body, "subgroup"));
+        add_new_event(title, id, start, end, user, description, origin, recurrence, "", priority, subgroup);
 
         crow::response res;
         res.code = 302;
@@ -163,6 +164,23 @@ void api_routes(crow::SimpleApp &app) {
         return crow::response(200, "Joined successfully");
     });
 
+    CROW_ROUTE(app, "/api/add_subgroup").methods("POST"_method)([](const crow::request &req) {
+        string group_id = urlDecode(getParam(req.body, "group_id"));
+        string subgroup_path = urlDecode(getParam(req.body, "name"));
+        string cookie_header = req.get_header_value("Cookie");
+        string user = get_logged_in_user(cookie_header);
+
+        if (user.empty())
+            return crow::response(401, "Unauthorized");
+
+        if (subgroup_path.empty())
+            return crow::response(400, "Subgroup path cannot be empty");
+
+        add_subgroup(group_id, subgroup_path);
+
+        return crow::response(200, "Subgroup added successfully");
+    });
+
     CROW_ROUTE(app, "/api/terminal").methods("POST"_method)([](const crow::request &req) {
         string command = urlDecode(getParam(req.body, "command"));
         string cookie_header = req.get_header_value("Cookie");
@@ -171,10 +189,32 @@ void api_routes(crow::SimpleApp &app) {
         if (user.empty())
             return crow::response(401, "Unauthorized");
 
-        string output = process_terminal_command(command, user);
+        // Odtwarzanie grupy z ciasteczka
+        string currentgroup = "";
+        size_t pos = cookie_header.find("TerminalGroup=");
+        if (pos != string::npos) {
+            size_t start = pos + 14; // długość słowa "TerminalGroup="
+            size_t end = cookie_header.find(';', start);
+            currentgroup = cookie_header.substr(start, end - start);
+        }
 
-        json res_json = {{"output", output}};
-        return crow::response(200, res_json.dump());
+        string original_group = currentgroup;
+        string output = process_terminal_command(command, user, currentgroup);
+
+        string group_name = get_group_name(currentgroup);
+        json res_json = {
+            {"output", output},
+            {"currentGroup", currentgroup},
+            {"groupName", group_name}
+        };
+        crow::response res(200, res_json.dump());
+
+        // Jeśli komenda 'cd' zmieniła grupę, aktualizujemy ciasteczko
+        if (currentgroup != original_group) {
+            res.add_header("Set-Cookie", "TerminalGroup=" + currentgroup + "; Path=/");
+        }
+
+        return res;
     });
 
     // Przechwytujemy api_key przez referencję za pomocą [&]
@@ -208,7 +248,7 @@ void api_routes(crow::SimpleApp &app) {
         string url = "https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=" + api_key;
 
         json openai_request;
-        string sys_prompt = "Create a single Linux/Bash terminal command for the following request. Return ONLY the command as plain text. Do not use markdown, no explanations, no comments. The available commands are: help, whoami, clear, touch \"event name\" DD.MM HH:MM HH:MM \"description\" \"origin\" \"T=recurrence\" (recurrence is optional: daily, weekly, monthly, yearly, default none). Request: " + prompt;
+        string sys_prompt = "Create a single Linux/Bash terminal command for the following request. Return ONLY the command as plain text. Do not use markdown, no explanations, no comments. The available commands are: help, whoami, clear, touch \"event name\" DD.MM HH:MM HH:MM \"description\" [P=priority] [T=recurrence] [S=subgroup] [O=origin] (default origin is private). Request: " + prompt;
 
         openai_request["contents"][0]["parts"][0]["text"] = sys_prompt;
 

@@ -88,7 +88,7 @@ void join_group(const string &username, const string &group_id) {
     fout << members.dump(4);
 }
 
-void add_new_event(const string &title, const string &id, const string &start, const string &end, const string &user, const string &description, const string &origin, const string &recurrence, const string &recurrence_id, const string &priority) {
+void add_new_event(const string &title, const string &id, const string &start, const string &end, const string &user, const string &description, const string &origin, const string &recurrence, const string &recurrence_id, const string &priority, const string &subgroup) {
     string path = (origin == "private") ? "users/" + user + "/events.json" : "groups/" + origin + "/events.json";
 
     filesystem::path p(path);
@@ -182,7 +182,8 @@ void add_new_event(const string &title, const string &id, const string &start, c
             {"origin", origin},
             {"recurrence", recurrence},
             {"recurrence_id", rec_id},
-            {"priority", priority}};
+            {"priority", priority},
+            {"subgroup", subgroup}};
         data.push_back(new_ev);
     }
 
@@ -261,7 +262,7 @@ void edit_event(const string &title, const string &id, const string &start, cons
         fout.close();
 
         string new_base_id = to_string(time(0)) + "_" + to_string(rand() % 1000);
-        add_new_event(title, new_base_id, start, end, user, description, origin, recurrence, "", priority);
+        add_new_event(title, new_base_id, start, end, user, description, origin, recurrence, "", priority, "");
         return;
     }
 
@@ -325,7 +326,8 @@ vector<Event> get_user_event(const string &username) {
             item.value("origin", "private"),
             item.value("recurrence", "none"),
             item.value("recurrence_id", ""),
-            item.value("priority", "medium"));
+            item.value("priority", "medium"),
+            item.value("subgroup", ""));
     }
     return events;
 }
@@ -346,7 +348,7 @@ void get_group_events(const json &g, vector<Event> &events) {
                             item.value("start", ""), item.value("end", ""),
                             item.value("user", ""), item.value("description", ""),
                             g_id, item.value("recurrence", "none"), item.value("recurrence_id", ""),
-                            item.value("priority", "medium"));
+                            item.value("priority", "medium"), item.value("subgroup", ""));
     }
 }
 vector<Event> get_all_events(const string &username) {
@@ -362,7 +364,11 @@ void create_group(const string &group_name, const string &creator, string &id) {
     string path = "groups/" + id;
     filesystem::create_directories(path);
     json members = {creator};
-    json info = {{"name", group_name}, {"id", id}};
+    json info = {
+        {"name", group_name},
+        {"id", id},
+        {"subgroups", json::array()}
+    };
     ofstream f1(path + "/members.json");
     f1 << members.dump(4);
     ofstream f2(path + "/info.json");
@@ -376,6 +382,97 @@ string loadHtmlTemplate(const string &filePath) {
     stringstream buffer;
     buffer << file.rdbuf();
     return buffer.str();
+}
+
+void add_subgroup(const string &group_id, const string &subgroup_path) {
+    string info_path = "groups/" + group_id + "/info.json";
+    if (not filesystem::exists(info_path))
+        return;
+
+    ifstream fin(info_path);
+    json info;
+    fin >> info;
+    fin.close();
+
+    if (not info.contains("subgroups"))
+        info["subgroups"] = json::object();
+
+    // Parse subgroup path (e.g., "team1/subteam1")
+    vector<string> parts;
+    stringstream ss(subgroup_path);
+    string part;
+    while (getline(ss, part, '/')) {
+        if (not part.empty())
+            parts.push_back(part);
+    }
+
+    if (parts.empty())
+        return;
+
+    // Navigate/create nested structure
+    json *current = &info["subgroups"];
+    for (size_t i = 0; i < parts.size(); i++) {
+        if (not current->contains(parts[i])) {
+            (*current)[parts[i]] = json::object();
+        }
+        if (i < parts.size() - 1) {
+            current = &(*current)[parts[i]];
+        }
+    }
+
+    ofstream fout(info_path);
+    fout << info.dump(4);
+}
+
+void flatten_subgroups(const json &node, const string &prefix, vector<string> &result) {
+    if (node.is_object()) {
+        for (auto it = node.begin(); it != node.end(); ++it) {
+            string path = prefix.empty() ? it.key() : prefix + "/" + it.key();
+            result.push_back(path);
+            flatten_subgroups(it.value(), path, result);
+        }
+    }
+}
+
+vector<string> get_subgroups(const string &group_id) {
+    string info_path = "groups/" + group_id + "/info.json";
+    vector<string> subgroups;
+
+    if (not filesystem::exists(info_path))
+        return subgroups;
+
+    ifstream fin(info_path);
+    json info;
+    fin >> info;
+
+    if (info.contains("subgroups")) {
+        if (info["subgroups"].is_array()) {
+            // Legacy format: flat array
+            for (const auto &sg : info["subgroups"]) {
+                subgroups.push_back(sg);
+            }
+        } else if (info["subgroups"].is_object()) {
+            // New format: nested object
+            flatten_subgroups(info["subgroups"], "", subgroups);
+        }
+    }
+
+    return subgroups;
+}
+
+string get_group_name(const string &group_id) {
+    if (group_id.empty() or group_id == "private")
+        return "private";
+
+    string info_path = "groups/" + group_id + "/info.json";
+    if (not filesystem::exists(info_path))
+        return group_id;
+
+    ifstream fin(info_path);
+    json info;
+    fin >> info;
+
+    return info.value("name", group_id);
 }
 
 bool change_event_group(const string &event_id, const string &new_origin) {
@@ -411,7 +508,8 @@ bool change_event_group(const string &event_id, const string &new_origin) {
                             item.value("origin", "private"),
                             item.value("recurrence", "none"),
                             item.value("recurrence_id", ""),
-                            item.value("priority", "medium")
+                            item.value("priority", "medium"),
+                            item.value("subgroup", "")
                         );
                         old_path = events_path;
                         event_found = true;
@@ -438,7 +536,8 @@ bool change_event_group(const string &event_id, const string &new_origin) {
                         item.value("origin", ""),
                         item.value("recurrence", "none"),
                         item.value("recurrence_id", ""),
-                        item.value("priority", "medium")
+                        item.value("priority", "medium"),
+                        item.value("subgroup", "")
                     );
                     old_path = events_path;
                     event_found = true;
@@ -455,7 +554,7 @@ bool change_event_group(const string &event_id, const string &new_origin) {
 
     add_new_event(found_event.title, found_event.id, found_event.start, found_event.end,
                   found_event.user, found_event.description, new_origin,
-                  found_event.recurrence, found_event.recurrence_id, found_event.priority);
+                  found_event.recurrence, found_event.recurrence_id, found_event.priority, found_event.subgroup);
 
     return true;
 }

@@ -56,7 +56,7 @@ string parseAndFormatDateTime(const string &dateStr, const string &timeStr) {
     return dateStr + " " + timeStr;
 }
 
-string process_terminal_command(const string &fullLine, const string &currentUsername) {
+string process_terminal_command(const string &fullLine, const string &currentUsername, string &currentgroup) {
     if (fullLine.empty())
         return "";
 
@@ -73,9 +73,10 @@ string process_terminal_command(const string &fullLine, const string &currentUse
     } else if (cmd == "help") {
         output << "Available commands:\n"
                << "  cat {YYYY-MM-DD}\n"
-               << "  touch \"event name\" DD.MM HH:MM HH:MM \"description\" [P=priority] [T=recurrence]\n"
-               << "  touch \"event name\" in DD.MM HH:MM length HH:MM \"description\" [P=priority] [T=recurrence]\n"
-               << "  ccd <event_id> <new_group>\n"
+               << "  touch \"event name\" DD.MM HH:MM HH:MM \"description\" [P=priority] [T=recurrence] [S=subgroup]\n"
+               << "  touch \"event name\" in DD.MM HH:MM length HH:MM \"description\" [P=priority] [T=recurrence] [S=subgroup]\n"
+               << "  cd <group_name_or_id> - change to a specific group\n"
+               << "  cd ~ or cd private - change to private calendar\n"
                << "  clear\n"
                << "  whoami\n";
     } else if (cmd == "cat") {
@@ -98,7 +99,10 @@ string process_terminal_command(const string &fullLine, const string &currentUse
         string title, start, end, desc;
         string recurrence = "none";
         string priority = "medium";
-        string origin = "private";
+
+        // KLUCZOWA ZMIANA: Domyślnie używa wejścia z komendy 'cd'
+        string origin = currentgroup.empty() ? "private" : currentgroup;
+        string subgroup = "";
 
         bool isLengthFormat = false;
         for (size_t i = 0; i < args.size(); i++) {
@@ -137,6 +141,10 @@ string process_terminal_command(const string &fullLine, const string &currentUse
                         recurrence = args[i].substr(2);
                     } else if (args[i].rfind("P=", 0) == 0) {
                         priority = args[i].substr(2);
+                    } else if (args[i].rfind("S=", 0) == 0) {
+                        subgroup = args[i].substr(2);
+                    } else if (args[i].rfind("O=", 0) == 0) { // Pozwala AI nadpisać grupę 'cd'
+                        origin = args[i].substr(2);
                     }
                 }
             } else {
@@ -154,6 +162,10 @@ string process_terminal_command(const string &fullLine, const string &currentUse
                     recurrence = args[i].substr(2);
                 } else if (args[i].rfind("P=", 0) == 0) {
                     priority = args[i].substr(2);
+                } else if (args[i].rfind("S=", 0) == 0) {
+                    subgroup = args[i].substr(2);
+                } else if (args[i].rfind("O=", 0) == 0) {
+                    origin = args[i].substr(2);
                 }
             }
         } else if (args.size() >= 5) {
@@ -166,13 +178,17 @@ string process_terminal_command(const string &fullLine, const string &currentUse
                     recurrence = args[i].substr(2);
                 } else if (args[i].rfind("P=", 0) == 0) {
                     priority = args[i].substr(2);
+                } else if (args[i].rfind("S=", 0) == 0) {
+                    subgroup = args[i].substr(2);
+                } else if (args[i].rfind("O=", 0) == 0) {
+                    origin = args[i].substr(2);
                 }
             }
         } else {
             output << "Syntax error. Correct usage:\n"
-                   << "  AI format: touch \"title\" \"YYYY-MM-DD HH:MM\" \"YYYY-MM-DD HH:MM\" \"description\" [P=priority] [T=recurrence]\n"
-                   << "  Manual format: touch \"title\" DD.MM HH:MM HH:MM \"description\" [P=priority] [T=recurrence]\n"
-                   << "  Length format: touch \"title\" in DD.MM HH:MM length HH:MM \"description\" [P=priority] [T=recurrence]\n";
+                   << "  AI format: touch \"title\" \"YYYY-MM-DD HH:MM\" \"YYYY-MM-DD HH:MM\" \"description\" [P=priority] [T=recurrence] [O=origin]\n"
+                   << "  Manual format: touch \"title\" DD.MM HH:MM HH:MM \"description\" [P=priority] [T=recurrence] [O=origin]\n"
+                   << "  Length format: touch \"title\" in DD.MM HH:MM length HH:MM \"description\" [P=priority] [T=recurrence] [O=origin]\n";
             return output.str();
         }
 
@@ -181,49 +197,73 @@ string process_terminal_command(const string &fullLine, const string &currentUse
         if (end.length() >= 10 and end[10] == 'T')
             end[10] = ' ';
 
-        string id = to_string(time(0)) + "_" + to_string(rand() % 1000);
-
-        add_new_event(title, id, start, end, currentUsername, desc, origin, recurrence, "", priority);
-
-        output << "An event created!\n"
-               << "-> Title: " << title << "\n"
-               << "-> Start: " << start << "\n"
-               << "-> End:   " << end << "\n"
-               << "-> Desc:  " << desc << "\n"
-               << "-> Type:  private\n"
-               << "-> Prior: " << priority << "\n"
-               << "-> Recur: " << recurrence << "\n";
-    } else if (cmd == "ccd") {
-        string eventId, groupNameOrId;
-        ss >> eventId >> groupNameOrId;
-
-        if (eventId.empty() or groupNameOrId.empty()) {
-            output << "Syntax error. Usage: ccd <event_id> <group_name_or_id>\n";
-            return output.str();
-        }
-
-        string resolved_group = groupNameOrId;
-        if (groupNameOrId != "private") {
+        // Rozwiązywanie nazwy na ID, niezależnie czy pochodzi z CD czy z argumentu O=
+        string resolved_origin = origin;
+        if (origin != "private") {
             bool found = false;
             vector<json> groups = get_user_groups(currentUsername);
             for (const auto &g : groups) {
-                if (g.value("name", "") == groupNameOrId or g.value("id", "") == groupNameOrId) {
-                    resolved_group = g.value("id", "");
+                if (g.value("name", "") == origin or g.value("id", "") == origin) {
+                    resolved_origin = g.value("id", "");
                     found = true;
                     break;
                 }
             }
             if (not found) {
-                output << "Error: Group '" << groupNameOrId << "' not found or you are not a member.\n";
+                output << "Error: Group '" << origin << "' not found or you are not a member.\n";
                 return output.str();
             }
         }
 
-        if (change_event_group(eventId, resolved_group)) {
-            output << "Event " << eventId << " moved to group: " << groupNameOrId << "\n";
-        } else {
-            output << "Error: Could not change event group. Event may not exist or you lack permissions.\n";
+        string id = to_string(time(0)) + "_" + to_string(rand() % 1000);
+
+        add_new_event(title, id, start, end, currentUsername, desc, resolved_origin, recurrence, "", priority, subgroup);
+
+        // ... Kod outputu pozostaje bez zmian ...
+        output << "An event created!\n"
+               << "-> Title: " << title << "\n"
+               << "-> Start: " << start << "\n"
+               << "-> End:   " << end << "\n"
+               << "-> Desc:  " << desc << "\n"
+               << "-> Type:  " << origin << "\n"
+               << "-> Prior: " << priority << "\n"
+               << "-> Recur: " << recurrence << "\n";
+        if (not subgroup.empty()) {
+            output << "-> Subgr: " << subgroup << "\n";
         }
+    } else if (cmd == "cd") {
+        string groupNameOrId;
+        getline(ss, groupNameOrId);
+        groupNameOrId = groupNameOrId.substr(groupNameOrId.find_first_not_of(" \t"));
+
+        if (groupNameOrId.empty() or groupNameOrId == "~" or groupNameOrId == "private") {
+            currentgroup = "";
+            output << "Changed to private calendar.\n";
+            return output.str();
+        }
+
+        string resolved_group = groupNameOrId;
+        string resolved_name = groupNameOrId;
+        bool found = false;
+
+        vector<json> groups = get_user_groups(currentUsername);
+        for (const auto &g : groups) {
+            if (g.value("name", "") == groupNameOrId or g.value("id", "") == groupNameOrId) {
+                resolved_group = g.value("id", "");
+                resolved_name = g.value("name", "");
+                found = true;
+                break;
+            }
+        }
+
+        if (not found) {
+            output << "Error: Group '" << groupNameOrId << "' not found or you are not a member.\n";
+            return output.str();
+        }
+
+        currentgroup = resolved_group;
+        output << "Changed to group: " << resolved_name << "\n";
+        output << "RELOAD_CALENDAR\n";
     } else {
         output << "Unknown command. Try 'help'.\n";
     }
@@ -231,12 +271,13 @@ string process_terminal_command(const string &fullLine, const string &currentUse
     return output.str();
 }
 
-void executeTerminal() {
+void executeTerminal(const string &currentUsername) {
+    string group = "";
     string line;
-    string username = "user";
+    string username = currentUsername;
 
     while (true) {
-        cout << username << "@calang:~$ ";
+        cout << username << "@calang/" << group << ":~$ ";
         if (!getline(cin, line))
             break;
 
@@ -259,9 +300,9 @@ void executeTerminal() {
         } else if (cmd == "exit") {
             break;
         } else if (cmd == "help") {
-            cout << "Available commands:\n  cat {YYYY-MM-DD}\n  touch \"event name\" DD.MM HH:MM HH:MM \"description\" [P=priority] [T=recurrence]\n  touch \"event name\" in DD.MM HH:MM length HH:MM \"description\" [P=priority] [T=recurrence]\n  ccd <event_id> <new_group>\n  clear\n  whoami" << endl;
+            cout << "Available commands:\n  cat {YYYY-MM-DD}\n  touch \"event name\" DD.MM HH:MM HH:MM \"description\" [P=priority] [T=recurrence] [S=subgroup]\n  touch \"event name\" in DD.MM HH:MM length HH:MM \"description\" [P=priority] [T=recurrence] [S=subgroup]\n  cd <group_name_or_id>\n  cd ~ or cd private\n  clear\n  whoami" << endl;
         } else {
-            cout << process_terminal_command(line, username);
+            cout << process_terminal_command(line, username, group);
         }
     }
 }

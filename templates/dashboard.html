@@ -993,6 +993,13 @@
             </ul>
         </div>
 
+        <div class="sb-section" id="subgroups-section" style="display:none;">
+            <div class="sb-label">Subgroups</div>
+            <ul class="sb-menu" id="subgroups-list">
+                <li class="group-empty">No subgroups</li>
+            </ul>
+        </div>
+
         <div class="sb-forms">
             <!-- AI command generator -->
             <div class="sb-form-block">
@@ -1023,6 +1030,15 @@
                 <div class="sb-row">
                     <input type="text" class="sb-input" id="join-group-id" placeholder="Group ID">
                     <button class="sb-btn join" onclick="joinGroup()">Join</button>
+                </div>
+            </div>
+
+            <!-- Add subgroup -->
+            <div class="sb-form-block" id="subgroup-form" style="display:none;">
+                <label>Add Subgroup</label>
+                <div class="sb-row">
+                    <input type="text" class="sb-input" id="new-subgroup-name" placeholder="Subgroup name" maxlength="60">
+                    <button class="sb-btn" onclick="addSubgroup()">Add</button>
                 </div>
             </div>
         </div>
@@ -1138,8 +1154,14 @@
                 </div>
                 <div class="form-group" style="margin-top:13px;">
                     <label>Add to</label>
-                    <select class="form-control" id="n_origin" name="origin">
+                    <select class="form-control" id="n_origin" name="origin" onchange="updateSubgroupOptions('n_subgroup', this.value)">
                         <option value="private">Private</option>
+                    </select>
+                </div>
+                <div class="form-group" id="n_subgroup_wrapper" style="display:none;">
+                    <label>Subgroup (optional)</label>
+                    <select class="form-control" id="n_subgroup" name="subgroup">
+                        <option value="">None</option>
                     </select>
                 </div>
                 <div class="form-group">
@@ -1485,6 +1507,11 @@ function changeWeek(dateVal) {
 function switchView(name) {
     const p = new URLSearchParams(window.location.search);
     p.set('view', name);
+    if (name === 'all' || name === 'private') {
+        currentGroupId = null;
+        document.getElementById('subgroup-form').style.display = 'none';
+        document.getElementById('subgroups-section').style.display = 'none';
+    }
     window.location.search = p.toString();
 }
 
@@ -1495,6 +1522,7 @@ function toggleAdvanced(id) {
 
 /* ═══ Groups ═══ */
 let cachedGroups = [];
+let currentGroupId = null;
 
 function loadGroups() {
     fetch('/api/my_groups')
@@ -1520,8 +1548,18 @@ function loadGroups() {
             const li = document.createElement('li');
             li.id = 'group-' + g.id;
             li.textContent = g.name;
-            if (view === g.id) li.classList.add('active');
-            li.onclick = () => switchView(g.id);
+            if (view === g.id) {
+                li.classList.add('active');
+                currentGroupId = g.id;
+                loadSubgroups(g.id);
+                document.getElementById('subgroup-form').style.display = 'block';
+            }
+            li.onclick = () => {
+                currentGroupId = g.id;
+                switchView(g.id);
+                loadSubgroups(g.id);
+                document.getElementById('subgroup-form').style.display = 'block';
+            };
             list.appendChild(li);
 
             if (sel) {
@@ -1535,6 +1573,32 @@ function loadGroups() {
     .catch(() => {
         document.getElementById('groups-list').innerHTML = '<li class="group-empty">Error loading</li>';
     });
+}
+
+function loadSubgroups(groupId) {
+    const group = cachedGroups.find(g => g.id === groupId);
+    const subgroupsList = document.getElementById('subgroups-list');
+    const subgroupsSection = document.getElementById('subgroups-section');
+
+    if (!group || !group.subgroups || group.subgroups.length === 0) {
+        subgroupsList.innerHTML = '<li class="group-empty">No subgroups</li>';
+        subgroupsSection.style.display = 'none';
+        return;
+    }
+
+    subgroupsSection.style.display = 'block';
+    subgroupsList.innerHTML = '';
+    group.subgroups.forEach(sg => {
+        const li = document.createElement('li');
+        li.textContent = sg;
+        li.onclick = () => filterBySubgroup(groupId, sg);
+        subgroupsList.appendChild(li);
+    });
+}
+
+function filterBySubgroup(groupId, subgroup) {
+    // This would filter events by subgroup in the view
+    console.log('Filtering by subgroup:', groupId, subgroup);
 }
 
 function createGroup() {
@@ -1563,6 +1627,50 @@ function joinGroup() {
         if (r.ok) { input.value = ''; location.reload(); }
         else alert('Invalid group ID.');
     });
+}
+
+function addSubgroup() {
+    const input = document.getElementById('new-subgroup-name');
+    const name = input.value.trim();
+    if (!name || !currentGroupId) return;
+
+    fetch('/api/add_subgroup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: 'group_id=' + encodeURIComponent(currentGroupId) + '&name=' + encodeURIComponent(name)
+    }).then(r => {
+        if (r.ok) {
+            input.value = '';
+            location.reload();
+        }
+        else alert('Failed to add subgroup.');
+    });
+}
+
+function updateSubgroupOptions(selectId, groupId) {
+    const wrapper = document.getElementById(selectId + '_wrapper');
+    const select = document.getElementById(selectId);
+
+    if (!groupId || groupId === 'private') {
+        wrapper.style.display = 'none';
+        return;
+    }
+
+    const group = cachedGroups.find(g => g.id === groupId);
+    if (!group || !group.subgroups || group.subgroups.length === 0) {
+        wrapper.style.display = 'none';
+        return;
+    }
+
+    select.innerHTML = '<option value="">None</option>';
+    group.subgroups.forEach(sg => {
+        const opt = document.createElement('option');
+        opt.value = sg;
+        opt.textContent = sg;
+        select.appendChild(opt);
+    });
+
+    wrapper.style.display = 'block';
 }
 
 /* ═══ Flatpickr variables ═══ */
@@ -1739,18 +1847,51 @@ document.getElementById('termInput').addEventListener('keydown', function(e) {
     })
     .then(r => r.json())
     .then(data => {
-        if (data.output) printTerminal(data.output, false);
+        if (data.output) {
+            const lines = data.output.split('\n');
+            const hasReload = lines.some(l => l.trim() === 'RELOAD_CALENDAR');
+            const output = lines.filter(l => l.trim() !== 'RELOAD_CALENDAR').join('\n');
+            if (output) printTerminal(output, false);
+            if (hasReload) location.reload();
+        }
+        if (data.groupName) updateTerminalPrompt(data.groupName);
         if (cmd.startsWith('touch')) location.reload();
     })
     .catch(() => printTerminal('Error executing command', false));
 });
 
+let currentTerminalGroup = '';
+
+function getCookie(name) {
+    const value = `; ${document.cookie}`;
+    const parts = value.split(`; ${name}=`);
+    if (parts.length === 2) return parts.pop().split(';').shift();
+    return '';
+}
+
+function updateTerminalPrompt(groupName) {
+    currentTerminalGroup = groupName && groupName !== 'private' ? groupName : '';
+    const promptPath = currentTerminalGroup ? '/' + currentTerminalGroup : '';
+
+    // Update all prompt labels
+    document.querySelectorAll('.term-prompt-lbl').forEach(lbl => {
+        lbl.innerHTML = `<span class="tp">user@calang${promptPath}</span><span class="tc">:~$</span>&nbsp;`;
+    });
+
+    // Update header
+    const hdrLeft = document.querySelector('.term-hdr-left');
+    if (hdrLeft) {
+        hdrLeft.innerHTML = `<span class="tp">user@calang${promptPath}</span><span class="tc">:~</span><span class="tn"> — terminal</span>`;
+    }
+}
+
 function printTerminal(text, isCmd) {
     const out = document.getElementById('termOutput');
     const div = document.createElement('div');
     div.className = 'term-line';
+    const promptPath = currentTerminalGroup ? '/' + currentTerminalGroup : '';
     if (isCmd) {
-        div.innerHTML = `<span class="tp">user@calang</span><span class="tc">:~$</span> ${escHtml(text)}`;
+        div.innerHTML = `<span class="tp">user@calang${promptPath}</span><span class="tc">:~$</span> ${escHtml(text)}`;
     } else {
         div.textContent = text;
         div.style.whiteSpace = 'pre-wrap';
@@ -1804,7 +1945,14 @@ function runAICommand() {
     })
     .then(r => r.json())
     .then(data => {
-        if (data.output) printTerminal(data.output, false);
+        if (data.output) {
+            const lines = data.output.split('\n');
+            const hasReload = lines.some(l => l.trim() === 'RELOAD_CALENDAR');
+            const output = lines.filter(l => l.trim() !== 'RELOAD_CALENDAR').join('\n');
+            if (output) printTerminal(output, false);
+            if (hasReload) location.reload();
+        }
+        if (data.groupName) updateTerminalPrompt(data.groupName);
         if (cmd.startsWith('touch')) location.reload();
     })
     .catch(() => printTerminal('Error executing command', false));
@@ -1812,6 +1960,21 @@ function runAICommand() {
 
 /* ═══ Init ═══ */
 window.addEventListener('DOMContentLoaded', () => {
+    // Initialize terminal prompt from cookie
+    const termGroup = getCookie('TerminalGroup');
+    if (termGroup) {
+        // Fetch group name from groups list
+        fetch('/api/my_groups')
+            .then(r => r.json())
+            .then(groups => {
+                const group = groups.find(g => g.id === termGroup || g.name === termGroup);
+                if (group) {
+                    updateTerminalPrompt(group.name);
+                }
+            })
+            .catch(() => {});
+    }
+
     // Initialize Flatpickr for date choosing window and hour inputs
     nDatePicker = flatpickr("#n_date", {
         dateFormat: "Y-m-d",
