@@ -19,6 +19,14 @@ size_t WriteCallback(void *contents, size_t size, size_t nmemb, void *userp) {
 void api_routes(crow::SimpleApp &app) {
     const char *env_key = std::getenv("GEMINI_API_KEY");
     string api_key = env_key ? env_key : "";
+    cout << "API KEY ";
+    for (char c : api_key) {
+        cout << c << " ";
+    }
+    cout << endl;
+    if (!env_key) {
+        cerr << "GEMINI_API_KEY not found\n";
+    }
 
     CROW_ROUTE(app, "/api/new_event").methods("POST"_method)([](const crow::request &req) {
         string title = urlDecode(getParam(req.body, "title"));
@@ -205,8 +213,7 @@ void api_routes(crow::SimpleApp &app) {
         json res_json = {
             {"output", output},
             {"currentGroup", currentgroup},
-            {"groupName", group_name}
-        };
+            {"groupName", group_name}};
         crow::response res(200, res_json.dump());
 
         // Jeśli komenda 'cd' zmieniła grupę, aktualizujemy ciasteczko
@@ -234,7 +241,7 @@ void api_routes(crow::SimpleApp &app) {
     });
 
     // CROW_ROUTE(app, "/api/generate_command").methods("POST"_method)[&](const crow::request &req) {
-    CROW_ROUTE(app, "/api/generate_command").methods("POST"_method)([&](const crow::request &req) {
+    CROW_ROUTE(app, "/api/generate_command").methods("POST"_method)([api_key](const crow::request &req) {
         crow::response res;
         res.add_header("Content-Type", "application/json");
 
@@ -245,7 +252,7 @@ void api_routes(crow::SimpleApp &app) {
             return res;
         }
 
-        string url = "https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=" + api_key;
+        string url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent";
 
         json openai_request;
         string sys_prompt = "Create a single Linux/Bash terminal command for the following request. Return ONLY the command as plain text. Do not use markdown, no explanations, no comments. The available commands are: help, whoami, clear, touch \"event name\" DD.MM HH:MM HH:MM \"description\" [P=priority] [T=recurrence] [S=subgroup] [O=origin] (default origin is private). Request: " + prompt;
@@ -259,13 +266,24 @@ void api_routes(crow::SimpleApp &app) {
         if (curl) {
             struct curl_slist *headers = nullptr;
             headers = curl_slist_append(headers, "Content-Type: application/json");
+            headers = curl_slist_append(headers, ("X-goog-api-key: " + api_key).c_str());
 
             curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
+            curl_easy_setopt(curl, CURLOPT_POST, 1L);
             curl_easy_setopt(curl, CURLOPT_POSTFIELDS, request_data.c_str());
+            curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, request_data.size());
+
+            // Odkomentowane poprawki: przekazanie nagłówków
             curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
+
+            // Odkomentowane poprawki: callback i zmienna do zapisu odpowiedzi
             curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
             curl_easy_setopt(curl, CURLOPT_WRITEDATA, &response_data);
 
+            cerr << "REQUEST:\n"
+                 << request_data << endl;
+            cerr << "API KEY = [" << api_key << "]" << endl;
+            cerr << "LEN = " << api_key.size() << endl;
             CURLcode cres = curl_easy_perform(curl);
             curl_easy_cleanup(curl);
             curl_slist_free_all(headers);
@@ -276,6 +294,10 @@ void api_routes(crow::SimpleApp &app) {
                 return res;
             }
         }
+
+        // Dodane wypisywanie odpowiedzi przed próbą jej parsowania
+        cerr << "RESPONSE:\n"
+             << response_data << endl;
 
         try {
             json google_json = json::parse(response_data);
@@ -296,6 +318,7 @@ void api_routes(crow::SimpleApp &app) {
             res.code = 200;
             res.body = json({{"command", generated_command}}).dump();
             return res;
+
         } catch (const exception &e) {
             cerr << "PARSING ERROR: " << e.what() << endl;
             cerr << "RAW RESPONSE: " << response_data << endl;
