@@ -1,4 +1,7 @@
 {
     "id": "1779045802",
-    "name": "test1"
+    "name": "test1",
+    "subgroups": {
+        "sub1": {}
+    }
 }

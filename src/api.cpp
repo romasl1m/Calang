@@ -189,6 +189,75 @@ void api_routes(crow::SimpleApp &app) {
         return crow::response(200, "Subgroup added successfully");
     });
 
+    CROW_ROUTE(app, "/api/group_info").methods("GET"_method)([](const crow::request &req) {
+        string cookie_header = req.get_header_value("Cookie");
+        string user = get_logged_in_user(cookie_header);
+
+        if (user.empty()) {
+            return crow::response(401, "Unauthorized");
+        }
+
+        string group_id = req.url_params.get("id") ? req.url_params.get("id") : "";
+        if (group_id.empty()) {
+            return crow::response(400, "Missing group id");
+        }
+
+        string info_path = "groups/" + group_id + "/info.json";
+        string members_path = "groups/" + group_id + "/members.json";
+        string events_path = "groups/" + group_id + "/events.json";
+
+        if (!filesystem::exists(info_path)) {
+            return crow::response(404, "Group not found");
+        }
+
+        // Read info
+        json info;
+        ifstream f_info(info_path);
+        if (f_info.is_open()) { f_info >> info; f_info.close(); }
+
+        // Read members
+        json members = json::array();
+        if (filesystem::exists(members_path)) {
+            ifstream f_mem(members_path);
+            if (f_mem.is_open()) { f_mem >> members; f_mem.close(); }
+        }
+
+        // Count events
+        int event_count = 0;
+        if (filesystem::exists(events_path)) {
+            ifstream f_ev(events_path);
+            json events;
+            if (f_ev.is_open()) { f_ev >> events; f_ev.close(); }
+            if (events.is_array()) event_count = events.size();
+        }
+
+        // Get subgroups (nested structure)
+        json subgroups_raw = json::object();
+        if (info.contains("subgroups")) {
+            subgroups_raw = info["subgroups"];
+        }
+
+        // Get creator (first member)
+        string creator = "";
+        if (members.is_array() && !members.empty()) {
+            creator = members[0].get<string>();
+        }
+
+        json result = {
+            {"id", info.value("id", group_id)},
+            {"name", info.value("name", "")},
+            {"members", members},
+            {"member_count", members.is_array() ? (int)members.size() : 0},
+            {"event_count", event_count},
+            {"subgroups", subgroups_raw},
+            {"creator", creator}
+        };
+
+        crow::response res(200, result.dump());
+        res.add_header("Content-Type", "application/json");
+        return res;
+    });
+
     CROW_ROUTE(app, "/api/terminal").methods("POST"_method)([](const crow::request &req) {
         string command = urlDecode(getParam(req.body, "command"));
         string cookie_header = req.get_header_value("Cookie");

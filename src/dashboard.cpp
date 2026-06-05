@@ -146,7 +146,8 @@ void dashboard(crow::SimpleApp &app) {
                     events_html += "data-start=\"" + start_time + "\" ";
                     events_html += "data-end=\"" + end_time + "\" ";
                     events_html += "data-origin=\"" + e.origin + "\" ";
-                    events_html += "data-recurrence=\"" + e.recurrence + "\">";
+                    events_html += "data-recurrence=\"" + e.recurrence + "\" ";
+                    events_html += "data-subgroup=\"" + e.subgroup + "\">";
                     events_html += "  <span class='time'>" + start_time + " - " + end_time + "</span>";
                     events_html += "  <span class='title'>" + dec_title + "</span>";
                     events_html += "</div>";

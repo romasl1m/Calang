@@ -367,8 +367,7 @@ void create_group(const string &group_name, const string &creator, string &id) {
     json info = {
         {"name", group_name},
         {"id", id},
-        {"subgroups", json::array()}
-    };
+        {"subgroups", json::array()}};
     ofstream f1(path + "/members.json");
     f1 << members.dump(4);
     ofstream f2(path + "/info.json");
@@ -492,7 +491,8 @@ bool change_event_group(const string &event_id, const string &new_origin) {
         if (base == "users") {
             for (const auto &user_dir : filesystem::directory_iterator(base)) {
                 events_path = user_dir.path().string() + "/events.json";
-                if (not filesystem::exists(events_path)) continue;
+                if (not filesystem::exists(events_path))
+                    continue;
 
                 ifstream fin(events_path);
                 json data;
@@ -509,18 +509,19 @@ bool change_event_group(const string &event_id, const string &new_origin) {
                             item.value("recurrence", "none"),
                             item.value("recurrence_id", ""),
                             item.value("priority", "medium"),
-                            item.value("subgroup", "")
-                        );
+                            item.value("subgroup", ""));
                         old_path = events_path;
                         event_found = true;
                         break;
                     }
                 }
-                if (event_found) break;
+                if (event_found)
+                    break;
             }
         } else {
             events_path = base + "/events.json";
-            if (not filesystem::exists(events_path)) continue;
+            if (not filesystem::exists(events_path))
+                continue;
 
             ifstream fin(events_path);
             json data;
@@ -537,18 +538,19 @@ bool change_event_group(const string &event_id, const string &new_origin) {
                         item.value("recurrence", "none"),
                         item.value("recurrence_id", ""),
                         item.value("priority", "medium"),
-                        item.value("subgroup", "")
-                    );
+                        item.value("subgroup", ""));
                     old_path = events_path;
                     event_found = true;
                     break;
                 }
             }
         }
-        if (event_found) break;
+        if (event_found)
+            break;
     }
 
-    if (not event_found) return false;
+    if (not event_found)
+        return false;
 
     delete_event(event_id, found_event.user, found_event.origin, false);
 
