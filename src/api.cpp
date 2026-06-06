@@ -213,13 +213,19 @@ void api_routes(crow::SimpleApp &app) {
         // Read info
         json info;
         ifstream f_info(info_path);
-        if (f_info.is_open()) { f_info >> info; f_info.close(); }
+        if (f_info.is_open()) {
+            f_info >> info;
+            f_info.close();
+        }
 
         // Read members
         json members = json::array();
         if (filesystem::exists(members_path)) {
             ifstream f_mem(members_path);
-            if (f_mem.is_open()) { f_mem >> members; f_mem.close(); }
+            if (f_mem.is_open()) {
+                f_mem >> members;
+                f_mem.close();
+            }
         }
 
         // Count events
@@ -227,8 +233,12 @@ void api_routes(crow::SimpleApp &app) {
         if (filesystem::exists(events_path)) {
             ifstream f_ev(events_path);
             json events;
-            if (f_ev.is_open()) { f_ev >> events; f_ev.close(); }
-            if (events.is_array()) event_count = events.size();
+            if (f_ev.is_open()) {
+                f_ev >> events;
+                f_ev.close();
+            }
+            if (events.is_array())
+                event_count = events.size();
         }
 
         // Get subgroups (nested structure)
@@ -250,8 +260,7 @@ void api_routes(crow::SimpleApp &app) {
             {"member_count", members.is_array() ? (int)members.size() : 0},
             {"event_count", event_count},
             {"subgroups", subgroups_raw},
-            {"creator", creator}
-        };
+            {"creator", creator}};
 
         crow::response res(200, result.dump());
         res.add_header("Content-Type", "application/json");

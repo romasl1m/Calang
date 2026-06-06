@@ -2,7 +2,7 @@
 <html lang="pl">
 <head>
     <meta charset="UTF-8">
-    <title>Calang - Rejestracja</title>
+    <title>Calang - Registration</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -329,7 +329,7 @@
                 </div>
             </div>
             
-            <h2>Zarejestruj się</h2>
+            <h2>Register</h2>
             
             <div class="error-container">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
@@ -339,22 +339,22 @@
             <form action="/register" method="POST">
                 <div class="form-group">
                     <label for="username">Login</label>
-                    <input type="text" id="username" name="username" class="error-input" value="{{username}}" placeholder="Wybierz swój login" required>
+                    <input type="text" id="username" name="username" class="error-input" value="{{username}}" placeholder="Choose your login" required>
                 </div>
                 
                 <div class="form-group">
-                    <label for="password">Hasło</label>
-                    <input type="password" id="password" name="password" placeholder="Wybierz silne hasło" required>
+                    <label for="password">Password</label>
+                    <input type="password" id="password" name="password" placeholder="Choose a strong password" required>
                 </div>
                 
-                <button type="submit">Zarejestruj się</button>
+                <button type="submit">Register</button>
             </form>
             
             <div class="divider"></div>
             
-            <div class="secondary-prompt">Masz już konto?</div>
+            <div class="secondary-prompt">Already have an account?</div>
             <form action="/" method="GET">
-                <button class="btn-secondary" type="submit">Wróć do logowania</button>
+                <button class="btn-secondary" type="submit">Return to log in</button>
             </form>
         </div>
     </div>

@@ -2525,12 +2525,16 @@ window.onclick = e => {
 };
 
 /* ═══ Terminal ═══ */
-function toggleTerminal() {
+function toggleTerminal(){
     const t = document.getElementById('terminalWindow');
-    const isVisible = t.style.display === 'flex';
-    t.style.display = isVisible ? 'none' : 'flex';
-    if (!isVisible) {
+    if(t.style.display === 'flex'){
+        t.style.display = 'none';
+        sessionStorage.removeItem('termOpen');
+        sessionStorage.removeItem('termHistory');
+    }else{
+        t.style.display = 'flex';
         document.getElementById('termInput').focus();
+        sessionStorage.setItem('termOpen', 'true');
     }
 }
 
@@ -2560,10 +2564,18 @@ document.getElementById('termInput').addEventListener('keydown', function(e) {
             const hasReload = lines.some(l => l.trim() === 'RELOAD_CALENDAR');
             const output = lines.filter(l => l.trim() !== 'RELOAD_CALENDAR').join('\n');
             if (output) printTerminal(output, false);
-            if (hasReload) location.reload();
+            if (hasReload) {
+                sessionStorage.setItem('termHistory', document.getElementById('termOutput').innerHTML);
+                sessionStorage.setItem('termOpen', 'true');
+                location.reload();
+            }
         }
         if (data.groupName) updateTerminalPrompt(data.groupName);
-        if (cmd.startsWith('touch')) location.reload();
+        if (cmd.startsWith('touch')) {
+            sessionStorage.setItem('termHistory', document.getElementById('termOutput').innerHTML);
+            sessionStorage.setItem('termOpen', 'true');
+            location.reload();
+        }
     })
     .catch(() => printTerminal('Error executing command', false));
 });
@@ -2658,10 +2670,18 @@ function runAICommand() {
             const hasReload = lines.some(l => l.trim() === 'RELOAD_CALENDAR');
             const output = lines.filter(l => l.trim() !== 'RELOAD_CALENDAR').join('\n');
             if (output) printTerminal(output, false);
-            if (hasReload) location.reload();
+            if (hasReload) {
+                sessionStorage.setItem('termHistory', document.getElementById('termOutput').innerHTML);
+                sessionStorage.setItem('termOpen', 'true');
+                location.reload();
+            }
         }
         if (data.groupName) updateTerminalPrompt(data.groupName);
-        if (cmd.startsWith('touch')) location.reload();
+        if (cmd.startsWith('touch')) {
+            sessionStorage.setItem('termHistory', document.getElementById('termOutput').innerHTML);
+            sessionStorage.setItem('termOpen', 'true');
+            location.reload();
+        }
     })
     .catch(() => printTerminal('Error executing command', false));
 }
@@ -2761,6 +2781,18 @@ window.addEventListener('DOMContentLoaded', () => {
     loadGroups();
     drawNowLine();
     setInterval(drawNowLine, 60000); // refresh every minute
+    if(sessionStorage.getItem('termOpen') === 'true'){
+        const t = document.getElementById('terminalWindow');
+        t.style.display = 'flex';
+        
+        const savedHistory = sessionStorage.getItem('termHistory');
+        if(savedHistory){
+            const termOut = document.getElementById('termOutput');
+            termOut.innerHTML = savedHistory;
+            termOut.scrollTop = termOut.scrollHeight; // Auto-scroll to bottom
+        }
+        document.getElementById('termInput').focus();
+    }
 });</script>
 </body>
 </html>

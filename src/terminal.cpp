@@ -276,10 +276,10 @@ void executeTerminal(const string &currentUsername) {
     string line;
     string username = currentUsername;
 
+    cout << username << "@calang/" << group << ":~$ ";
     while (true) {
-        cout << username << "@calang/" << group << ":~$ ";
-        if (!getline(cin, line))
-            break;
+        // if (!getline(cin, line))
+        //     break;
 
         if (line.empty())
             continue;
@@ -288,21 +288,24 @@ void executeTerminal(const string &currentUsername) {
         string cmd;
         ss >> cmd;
 
-        if (cmd == "clear") {
-#ifdef _WIN32
-            (void)system("cls");
-#else
-            int result = system("clear");
-            (void)result; // Ucisza kompilator
-#endif
-        } else if (cmd == "whoami") {
+        //         if (cmd == "clear") {
+        // #ifdef _WIN32
+        //             (void)system("cls");
+        // #else
+        //             int result = system("clear");
+        //             (void)result; // Ucisza kompilator
+        // #endif
+        //} else if (cmd == "whoami") {
+        if (cmd == "whoami") {
             cout << username << endl;
         } else if (cmd == "exit") {
             break;
         } else if (cmd == "help") {
-            cout << "Available commands:\n  cat {YYYY-MM-DD}\n  touch \"event name\" DD.MM HH:MM HH:MM \"description\" [P=priority] [T=recurrence] [S=subgroup]\n  touch \"event name\" in DD.MM HH:MM length HH:MM \"description\" [P=priority] [T=recurrence] [S=subgroup]\n  cd <group_name_or_id>\n  cd ~ or cd private\n  clear\n  whoami" << endl;
+            string output = "Available commands:\n  cat {YYYY-MM-DD}\n  touch \"event name\" DD.MM HH:MM HH:MM \"description\" [P=priority] [T=recurrence] [S=subgroup]\n cd <group_name_or_id>\n  cd ~ or cd private\n";
+            cout << output << endl;
         } else {
-            cout << process_terminal_command(line, username, group);
+            string output = process_terminal_command(line, username, group);
+            cout << output;
         }
     }
 }
