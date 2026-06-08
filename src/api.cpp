@@ -406,4 +406,111 @@ void api_routes(crow::SimpleApp &app) {
             return res;
         }
     });
+
+    // New AI chat endpoint
+    CROW_ROUTE(app, "/api/ai_chat").methods("POST"_method)([api_key](const crow::request &req) {
+        crow::response res;
+        res.add_header("Content-Type", "application/json");
+
+        try {
+            json request_json = json::parse(req.body);
+            string message = request_json["message"].get<string>();
+            json history = request_json.value("history", json::array());
+
+            if (message.empty()) {
+                res.code = 400;
+                res.body = json({{"error", "Message cannot be empty"}}).dump();
+                return res;
+            }
+
+            string url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent";
+
+            json gemini_request;
+            json& contents = gemini_request["contents"];
+
+            string system_context = "You are a helpful AI assistant for a calendar app called Calang. "
+                                   "Be concise, friendly, and helpful. Keep responses under 200 characters when possible. "
+                                   "You can help with: general questions, calendar tips, explaining features, and casual conversation.";
+
+            contents = json::array();
+            contents.push_back({
+                {"role", "user"},
+                {"parts", {{{"text", system_context}}}}
+            });
+
+            for (const auto& msg : history) {
+                string role = msg["role"].get<string>();
+                string content = msg["content"].get<string>();
+
+                if (role == "user") {
+                    contents.push_back({
+                        {"role", "user"},
+                        {"parts", {{{"text", content}}}}
+                    });
+                } else if (role == "assistant") {
+                    contents.push_back({
+                        {"role", "model"},
+                        {"parts", {{{"text", content}}}}
+                    });
+                }
+            }
+
+            contents.push_back({
+                {"role", "user"},
+                {"parts", {{{"text", message}}}}
+            });
+
+            string request_data = gemini_request.dump();
+            string response_data;
+
+            CURL *curl = curl_easy_init();
+            if (curl) {
+                struct curl_slist *headers = nullptr;
+                headers = curl_slist_append(headers, "Content-Type: application/json");
+                headers = curl_slist_append(headers, ("X-goog-api-key: " + api_key).c_str());
+
+                curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
+                curl_easy_setopt(curl, CURLOPT_POST, 1L);
+                curl_easy_setopt(curl, CURLOPT_POSTFIELDS, request_data.c_str());
+                curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, request_data.size());
+                curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
+                curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
+                curl_easy_setopt(curl, CURLOPT_WRITEDATA, &response_data);
+
+                CURLcode cres = curl_easy_perform(curl);
+                curl_easy_cleanup(curl);
+                curl_slist_free_all(headers);
+
+                if (cres != CURLE_OK) {
+                    res.code = 500;
+                    res.body = json({{"error", "Failed to contact AI API"}}).dump();
+                    return res;
+                }
+            }
+
+            json gemini_response = json::parse(response_data);
+
+            if (gemini_response.contains("error")) {
+                res.code = 500;
+                res.body = json({{"error", "AI API Error: " + gemini_response["error"]["message"].get<string>()}}).dump();
+                return res;
+            }
+
+            string ai_response = gemini_response["candidates"][0]["content"]["parts"][0]["text"];
+
+            if (!ai_response.empty() && ai_response.back() == '\n') {
+                ai_response.pop_back();
+            }
+
+            res.code = 200;
+            res.body = json({{"response", ai_response}}).dump();
+            return res;
+
+        } catch (const exception &e) {
+            cerr << "AI Chat Error: " << e.what() << endl;
+            res.code = 500;
+            res.body = json({{"error", string(e.what())}}).dump();
+            return res;
+        }
+    });
 }

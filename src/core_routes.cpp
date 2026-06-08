@@ -7,7 +7,7 @@ using namespace std;
 
 void core_routes(crow::SimpleApp &app) {
     CROW_ROUTE(app, "/")([]() {
-        string html = loadHtmlTemplate("templates/route.html");
+        string html = loadHtmlTemplate("templates/index.html");
         crow::response res(html);
         res.add_header("Content-Type", "text/html; charset=utf-8");
         return res;
