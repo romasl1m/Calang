@@ -333,7 +333,17 @@ void api_routes(crow::SimpleApp &app) {
         string url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent";
 
         json openai_request;
-        string sys_prompt = "Create a single Linux/Bash terminal command for the following request. Return ONLY the command as plain text. Do not use markdown, no explanations, no comments. The available commands are: help, whoami, clear, touch \"event name\" DD.MM HH:MM HH:MM \"description\" [P=priority] [T=recurrence] [S=subgroup] [O=origin] (default origin is private). Request: " + prompt;
+        string sys_prompt = "Create a single Linux/Bash terminal command for the following request. Return ONLY the command as plain text. Do not use markdown, no explanations, no comments. The available commands are:\n\n"
+                           "- cat YYYY-MM-DD : show events for a specific date\n"
+                           "- cat N : show next N events and store dates\n"
+                           "- grep \"text\" : find events containing text in title or description\n"
+                           "- touch \"event name\" DD.MM HH:MM HH:MM \"description\" [P=priority] [T=recurrence] [S=subgroup] [O=origin]\n"
+                           "- touch \"event name\" in DD.MM HH:MM length HH:MM \"description\" [P=priority] [T=recurrence] [S=subgroup] [O=origin]\n"
+                           "- cd <group_name_or_id> : change to a specific group\n"
+                           "- cd ~ or cd private : change to private calendar\n"
+                           "- dates : show stored dates from searches\n"
+                           "- $DATE or $DATE[n] : use stored dates in commands (n=index, 0=first)\n\n"
+                           "Request: " + prompt;
 
         openai_request["contents"][0]["parts"][0]["text"] = sys_prompt;
 
@@ -417,48 +427,137 @@ void api_routes(crow::SimpleApp &app) {
             string message = request_json["message"].get<string>();
             json history = request_json.value("history", json::array());
 
+            // Get user and group from cookie
+            string cookie_header = req.get_header_value("Cookie");
+            string user = get_logged_in_user(cookie_header);
+            string currentgroup = "";
+            size_t pos = cookie_header.find("TerminalGroup=");
+            if (pos != string::npos) {
+                size_t start = pos + 14;
+                size_t end = cookie_header.find(';', start);
+                currentgroup = cookie_header.substr(start, end - start);
+            }
+
             if (message.empty()) {
                 res.code = 400;
                 res.body = json({{"error", "Message cannot be empty"}}).dump();
                 return res;
             }
 
+            // Check if AI needs to execute a command
+            bool shouldExecuteCommand = false;
+            string commandToExecute = "";
+
+            // First, check if the message is asking for information that requires a command
+            vector<string> infoKeywords = {"show", "find", "list", "what", "when", "get", "search", "next", "upcoming"};
+            string lowerMessage = message;
+            transform(lowerMessage.begin(), lowerMessage.end(), lowerMessage.begin(), ::tolower);
+
+            for (const auto &keyword : infoKeywords) {
+                if (lowerMessage.find(keyword) != string::npos) {
+                    shouldExecuteCommand = true;
+                    break;
+                }
+            }
+
+            // If AI should get information, generate and execute a command
+            json commandExecutions = json::array();
+            if (shouldExecuteCommand && !user.empty()) {
+                // Generate a command using AI
+                string cmdPrompt = "Based on this user request, generate the appropriate terminal command: " + message;
+
+                string cmdUrl = "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent";
+                json cmd_request;
+                string cmd_sys = "Create a single Linux/Bash terminal command for the following request. Return ONLY the command as plain text. Do not use markdown, no explanations, no comments. The available commands are:\n\n"
+                                 "- cat YYYY-MM-DD : show events for a specific date\n"
+                                 "- cat N : show next N events and store dates in vector\n"
+                                 "- grep \"text\" : find events containing text in title or description\n"
+                                 "- touch \"event name\" DD.MM HH:MM HH:MM \"description\" [P=priority] [T=recurrence] [S=subgroup] [O=origin]\n"
+                                 "- dates : show stored dates from searches\n"
+                                 "- $DATE or $DATE[n] : use stored dates in commands (n=index)\n\n"
+                                 "Request: " +
+                                 message;
+
+                cmd_request["contents"][0]["parts"][0]["text"] = cmd_sys;
+                string cmd_request_data = cmd_request.dump();
+                string cmd_response_data;
+
+                CURL *cmd_curl = curl_easy_init();
+                if (cmd_curl) {
+                    struct curl_slist *cmd_headers = nullptr;
+                    cmd_headers = curl_slist_append(cmd_headers, "Content-Type: application/json");
+                    cmd_headers = curl_slist_append(cmd_headers, ("X-goog-api-key: " + api_key).c_str());
+
+                    curl_easy_setopt(cmd_curl, CURLOPT_URL, cmdUrl.c_str());
+                    curl_easy_setopt(cmd_curl, CURLOPT_POST, 1L);
+                    curl_easy_setopt(cmd_curl, CURLOPT_POSTFIELDS, cmd_request_data.c_str());
+                    curl_easy_setopt(cmd_curl, CURLOPT_POSTFIELDSIZE, cmd_request_data.size());
+                    curl_easy_setopt(cmd_curl, CURLOPT_HTTPHEADER, cmd_headers);
+                    curl_easy_setopt(cmd_curl, CURLOPT_WRITEFUNCTION, WriteCallback);
+                    curl_easy_setopt(cmd_curl, CURLOPT_WRITEDATA, &cmd_response_data);
+
+                    CURLcode cmd_res = curl_easy_perform(cmd_curl);
+                    curl_easy_cleanup(cmd_curl);
+                    curl_slist_free_all(cmd_headers);
+
+                    if (cmd_res == CURLE_OK) {
+                        try {
+                            json cmd_json = json::parse(cmd_response_data);
+                            if (!cmd_json.contains("error")) {
+                                commandToExecute = cmd_json["candidates"][0]["content"]["parts"][0]["text"];
+                                if (!commandToExecute.empty() && commandToExecute.back() == '\n') {
+                                    commandToExecute.pop_back();
+                                }
+
+                                // Execute the command
+                                string commandOutput = process_terminal_command(commandToExecute, user, currentgroup);
+                                commandExecutions.push_back({{"command", commandToExecute}, {"output", commandOutput}});
+                            }
+                        } catch (...) {
+                        }
+                    }
+                }
+            }
+
             string url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent";
 
             json gemini_request;
-            json& contents = gemini_request["contents"];
+            json &contents = gemini_request["contents"];
 
             string system_context = "You are a helpful AI assistant for a calendar app called Calang. "
-                                   "Be concise, friendly, and helpful. Keep responses under 200 characters when possible. "
-                                   "You can help with: general questions, calendar tips, explaining features, and casual conversation.";
+                                    "Be concise, friendly, and helpful. Keep responses under 200 characters when possible. "
+                                    "You can help with: general questions, calendar tips, explaining features, and casual conversation. "
+                                    "You can execute terminal commands to get information about events. When you execute a command, its output will be provided to you.";
 
             contents = json::array();
-            contents.push_back({
-                {"role", "user"},
-                {"parts", {{{"text", system_context}}}}
-            });
+            contents.push_back({{"role", "user"},
+                                {"parts", {{{"text", system_context}}}}});
 
-            for (const auto& msg : history) {
+            for (const auto &msg : history) {
                 string role = msg["role"].get<string>();
                 string content = msg["content"].get<string>();
 
                 if (role == "user") {
-                    contents.push_back({
-                        {"role", "user"},
-                        {"parts", {{{"text", content}}}}
-                    });
+                    contents.push_back({{"role", "user"},
+                                        {"parts", {{{"text", content}}}}});
                 } else if (role == "assistant") {
-                    contents.push_back({
-                        {"role", "model"},
-                        {"parts", {{{"text", content}}}}
-                    });
+                    contents.push_back({{"role", "model"},
+                                        {"parts", {{{"text", content}}}}});
                 }
             }
 
-            contents.push_back({
-                {"role", "user"},
-                {"parts", {{{"text", message}}}}
-            });
+            // Add command execution results to the context if any
+            string finalMessage = message;
+            if (!commandExecutions.empty()) {
+                finalMessage += "\n\n[System: I executed these commands for you]\n";
+                for (const auto &exec : commandExecutions) {
+                    finalMessage += "Command: " + exec["command"].get<string>() + "\n";
+                    finalMessage += "Output:\n" + exec["output"].get<string>() + "\n\n";
+                }
+            }
+
+            contents.push_back({{"role", "user"},
+                                {"parts", {{{"text", finalMessage}}}}});
 
             string request_data = gemini_request.dump();
             string response_data;
@@ -503,7 +602,7 @@ void api_routes(crow::SimpleApp &app) {
             }
 
             res.code = 200;
-            res.body = json({{"response", ai_response}}).dump();
+            res.body = json({{"response", ai_response}, {"commands", commandExecutions}}).dump();
             return res;
 
         } catch (const exception &e) {

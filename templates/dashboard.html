@@ -3,7 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <title>Calang</title>
-    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#0a0e27">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
@@ -1492,6 +1495,476 @@
         .flatpickr-time .numInputWrapper span.arrowDown::after {
             border-top-color: var(--purple-primary) !important;
         }
+
+        /* Mobile groups toggle button */
+        .mobile-groups-toggle {
+            display: none;
+            background: transparent;
+            border: 1px solid var(--border);
+            color: var(--text-mid);
+            padding: 3px 7px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 10px;
+            transition: all 0.15s;
+        }
+        .mobile-groups-toggle:hover {
+            border-color: var(--purple-primary);
+            color: var(--purple-primary);
+        }
+        .mobile-groups-toggle.collapsed {
+            transform: rotate(-90deg);
+        }
+
+        /* ═══════════ MOBILE & RESPONSIVE ═══════════ */
+        @media (max-width: 768px) {
+            /* Phone mode optimizations */
+            body {
+                -webkit-tap-highlight-color: transparent;
+                -webkit-touch-callout: none;
+            }
+
+            .sidebar {
+                position: fixed;
+                left: -224px;
+                top: 0;
+                bottom: 0;
+                z-index: 1200;
+                transition: left 0.3s ease;
+            }
+            .sidebar.mobile-open {
+                left: 0;
+            }
+
+            /* Show mobile groups toggle button */
+            .mobile-groups-toggle {
+                display: inline-block;
+            }
+
+            /* Groups section collapsed by default on mobile */
+            #groups-section .tree-container {
+                max-height: 0;
+                overflow: hidden;
+                opacity: 0;
+                transition: max-height 0.3s ease, opacity 0.2s ease;
+            }
+            #groups-section.expanded .tree-container {
+                max-height: 500px;
+                opacity: 1;
+                overflow-y: auto;
+            }
+
+            /* Make calendar larger on mobile - takes almost full page */
+            .calendar-wrap {
+                padding: 3px;
+                flex: 1;
+                /* Ensure calendar uses all available space */
+                display: flex;
+            }
+
+            .calendar-card {
+                flex: 1;
+                /* Ensure calendar card fills available height */
+                min-height: 0;
+            }
+
+            /* Compact topbar and toolbar for maximum calendar space */
+            .topbar {
+                padding: 0 10px;
+                height: 36px;
+            }
+
+            .toolbar {
+                height: 38px;
+                padding: 4px 10px;
+            }
+
+            /* Sidebar adjustments on mobile */
+            .sb-section {
+                max-height: none;
+            }
+
+            /* Keep AI chat and group forms visible in sidebar on mobile */
+            .sb-forms {
+                padding: 10px;
+            }
+
+            .mobile-overlay {
+                display: none;
+                position: fixed;
+                inset: 0;
+                background: rgba(0,0,0,0.5);
+                z-index: 1100;
+            }
+            .mobile-overlay.active {
+                display: block;
+            }
+
+            /* Mobile action buttons floating */
+            .mobile-menu-btn {
+                position: fixed;
+                bottom: 20px;
+                right: 20px;
+                width: 56px;
+                height: 56px;
+                border-radius: 50%;
+                background: linear-gradient(135deg, var(--purple-primary), var(--blue-primary));
+                border: none;
+                color: white;
+                font-size: 24px;
+                box-shadow: 0 4px 20px rgba(139, 92, 246, 0.5);
+                z-index: 1000;
+                cursor: pointer;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                transition: transform 0.2s;
+            }
+            .mobile-menu-btn:active {
+                transform: scale(0.95);
+            }
+
+            /* Quick add button for phone */
+            .mobile-quick-add {
+                position: fixed;
+                bottom: 20px;
+                left: 20px;
+                width: 56px;
+                height: 56px;
+                border-radius: 50%;
+                background: linear-gradient(135deg, var(--success), #14b8a6);
+                border: none;
+                color: white;
+                font-size: 28px;
+                box-shadow: 0 4px 20px rgba(16, 185, 129, 0.5);
+                z-index: 1000;
+                cursor: pointer;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                transition: transform 0.2s;
+            }
+            .mobile-quick-add:active {
+                transform: scale(0.95);
+            }
+
+            .main {
+                margin-left: 0;
+                /* Ensure main section uses full height on mobile */
+                display: flex;
+                flex-direction: column;
+                height: 100vh;
+            }
+
+            .terminal-window {
+                left: 0 !important;
+                height: 60vh;
+                bottom: 0;
+            }
+
+            /* Simplified toolbar for phone */
+            .toolbar {
+                flex-wrap: wrap;
+                gap: 6px;
+                padding: 8px 12px;
+                height: auto;
+            }
+
+            .tb-btn {
+                font-size: 11px;
+                padding: 5px 10px;
+            }
+
+            .tb-btn.term {
+                display: none; /* Hide terminal button, use floating action instead */
+            }
+
+            .week-badge {
+                margin-left: 0;
+                order: -1;
+                width: 100%;
+                text-align: center;
+                font-size: 9px;
+                padding: 3px 8px;
+            }
+
+            /* Compact topbar for phone */
+            .topbar {
+                padding: 0 12px;
+                height: 44px;
+            }
+
+            .user-greet {
+                font-size: 11px;
+            }
+
+            .avatar {
+                width: 24px;
+                height: 24px;
+            }
+
+            .logout-btn {
+                font-size: 10px;
+                padding: 4px 8px;
+            }
+
+            /* Calendar optimizations for phone - maximize space */
+            .calendar-wrap {
+                padding: 2px;
+            }
+
+            .cal-nav {
+                padding: 5px 8px;
+                flex-wrap: wrap;
+                gap: 6px;
+            }
+
+            .cal-nav-title {
+                font-size: 10px;
+                width: 100%;
+                text-align: center;
+                order: -1;
+            }
+
+            .cal-nav-btn {
+                flex: 1;
+                font-size: 9px;
+                padding: 4px 6px;
+            }
+
+            /* Compact day headers for more calendar space */
+            .day-name-cell {
+                padding: 4px 2px 3px;
+                font-size: 8px;
+            }
+
+            .day-name-cell .day-num {
+                font-size: 12px;
+            }
+
+            /* Smaller time ruler for more space */
+            :root {
+                --ruler-w: 42px;
+                --hour-h: 50px;
+            }
+
+            .hour-mark {
+                font-size: 9px;
+                padding-right: 5px;
+            }
+
+            /* Event cards optimized for touch */
+            .event-card {
+                font-size: 10px;
+                padding: 3px 6px;
+                min-height: 38px !important;
+                touch-action: manipulation;
+            }
+
+            .event-card .ev-time {
+                font-size: 8.5px;
+            }
+
+            .event-card .ev-title {
+                font-size: 10px;
+            }
+
+            /* All-day events on phone */
+            .allday-strip {
+                min-height: 36px;
+            }
+
+            .event-card.allday {
+                padding: 4px 8px;
+                min-height: 28px;
+            }
+
+            /* Modal optimizations for phone */
+            .modal-box {
+                max-width: 95vw;
+                margin: 0 10px;
+                max-height: 90vh;
+            }
+
+            .modal-body {
+                max-height: 60vh;
+            }
+
+            .form-control {
+                font-size: 16px; /* Prevents zoom on iOS */
+            }
+
+            /* AI chat optimized for phone */
+            .ai-chat-container {
+                height: 180px;
+            }
+
+            .ai-msg {
+                font-size: 11px;
+                max-width: 90%;
+            }
+
+            /* Hide AI chat on very small screens to save space */
+            @media (max-height: 700px) {
+                .sb-forms > div:has(.ai-chat-container) {
+                    display: none;
+                }
+            }
+
+            /* Better touch targets */
+            .sb-menu li,
+            .tree-row,
+            .btn,
+            button {
+                min-height: 44px;
+                display: flex;
+                align-items: center;
+            }
+
+            /* Group info panel full width on phone */
+            .group-info-panel {
+                width: 100%;
+                right: -100%;
+            }
+
+            .group-info-panel.open {
+                right: 0;
+            }
+
+            /* Swipe-friendly event cards */
+            .event-card {
+                cursor: pointer;
+                -webkit-tap-highlight-color: rgba(139, 92, 246, 0.2);
+            }
+
+            /* Larger flatpickr on phone */
+            .flatpickr-calendar {
+                font-size: 105%;
+            }
+
+            /* Scrollable calendar body optimizations */
+            .cal-body {
+                -webkit-overflow-scrolling: touch;
+            }
+
+            /* Sidebar optimization */
+            .sidebar {
+                width: 280px;
+                left: -280px;
+            }
+
+            /* Bottom safe area for iPhone notch */
+            @supports (padding-bottom: env(safe-area-inset-bottom)) {
+                .mobile-menu-btn,
+                .mobile-quick-add {
+                    bottom: calc(20px + env(safe-area-inset-bottom));
+                }
+
+                .terminal-window {
+                    padding-bottom: env(safe-area-inset-bottom);
+                }
+            }
+        }
+
+        /* Landscape phone mode */
+        @media (max-width: 915px) and (orientation: landscape) {
+            .topbar {
+                height: 40px;
+            }
+
+            .toolbar {
+                height: 40px;
+                padding: 4px 12px;
+            }
+
+            .calendar-wrap {
+                padding: 4px;
+            }
+
+            :root {
+                --hour-h: 40px;
+            }
+
+            .day-name-cell {
+                padding: 4px 2px;
+            }
+
+            .day-name-cell span {
+                font-size: 8px;
+            }
+
+            .day-name-cell .day-num {
+                font-size: 11px;
+            }
+
+            /* Hide floating buttons in landscape for more space */
+            .mobile-quick-add {
+                display: none;
+            }
+
+            .mobile-menu-btn {
+                bottom: 10px;
+                right: 10px;
+                width: 44px;
+                height: 44px;
+                font-size: 18px;
+            }
+        }
+
+        /* Tablet adjustments */
+        @media (min-width: 769px) and (max-width: 1024px) {
+            .sidebar {
+                width: 200px;
+            }
+
+            :root {
+                --ruler-w: 48px;
+            }
+
+            .ai-chat-container {
+                height: 240px;
+            }
+        }
+
+        /* Hide mobile-only elements on desktop */
+        @media (min-width: 769px) {
+            .mobile-menu-btn,
+            .mobile-quick-add {
+                display: none;
+            }
+        }
+
+        /* Phone-specific pull-to-refresh hint */
+        .refresh-hint {
+            display: none;
+            text-align: center;
+            padding: 8px;
+            font-size: 11px;
+            color: var(--text-dim);
+            background: rgba(139, 92, 246, 0.05);
+            border-bottom: 1px solid var(--border);
+        }
+
+        @media (max-width: 768px) {
+            .refresh-hint {
+                display: block;
+            }
+
+            /* Optimize toolbar buttons for phone */
+            .toolbar .tb-btn:first-child {
+                display: none !important; /* Hide desktop new event, use floating button */
+            }
+
+            .toolbar .tb-btn.term:not(.mobile-term-btn) {
+                display: none !important;
+            }
+
+            .toolbar .mobile-term-btn {
+                display: flex !important;
+                font-size: 18px;
+                padding: 6px 12px;
+            }
+        }
     </style>
 </head>
 <body>
@@ -1504,8 +1977,17 @@
         <div class="blob blob-3"></div>
     </div>
 
+    <!-- Mobile overlay -->
+    <div class="mobile-overlay" id="mobileOverlay" onclick="closeMobileSidebar()"></div>
+
+    <!-- Mobile menu button -->
+    <button class="mobile-menu-btn" id="mobileMenuBtn" onclick="toggleMobileSidebar()">☰</button>
+
+    <!-- Mobile quick add button -->
+    <button class="mobile-quick-add" id="mobileQuickAdd" onclick="openNewModal()">+</button>
+
     <!-- ═══ SIDEBAR ═══ -->
-    <aside class="sidebar">
+    <aside class="sidebar" id="sidebar">
         <div class="logo" onclick="switchView('all')">
             <span class="logo-pulse"></span>
             Calang
@@ -1519,8 +2001,11 @@
             </ul>
         </div>
 
-        <div class="sb-section">
-            <div class="sb-label">Explorer</div>
+        <div class="sb-section" id="groups-section">
+            <div class="sb-label" style="display: flex; justify-content: space-between; align-items: center;">
+                <span>Explorer</span>
+                <button class="mobile-groups-toggle" id="mobileGroupsToggle" onclick="toggleGroupsSection(event)">▼</button>
+            </div>
             <div class="tree-container" id="group-tree">
                 <div style="font-size:12px;color:var(--text-dim);padding:4px 6px;">Loading…</div>
             </div>
@@ -1582,6 +2067,7 @@
         <div class="toolbar">
             <button class="tb-btn" onclick="openNewModal()">+ New event</button>
             <button class="tb-btn term" onclick="toggleTerminal()">_ terminal</button>
+            <button class="tb-btn term mobile-term-btn" onclick="toggleTerminal()" style="display:none;">⌘</button>
             <span class="week-badge" id="weekBadge">W--</span>
         </div>
 
@@ -2435,6 +2921,15 @@ function copyGroupId() {
     });
 }
 
+function toggleGroupsSection(event) {
+    event.stopPropagation();
+    const section = document.getElementById('groups-section');
+    const toggle = document.getElementById('mobileGroupsToggle');
+    const isExpanded = section.classList.toggle('expanded');
+    toggle.classList.toggle('collapsed', !isExpanded);
+    toggle.textContent = isExpanded ? '▲' : '▼';
+}
+
 function createGroup() {
     const input = document.getElementById('new-group-name');
     const name  = input.value.trim();
@@ -2880,6 +3375,18 @@ function sendAIMessage() {
         } else if (data.error) {
             addChatMessage('system', 'Error: ' + data.error);
         }
+
+        // Check if any commands were executed that modify events
+        if (data.commands && data.commands.length > 0) {
+            const hasEventModification = data.commands.some(cmd =>
+                cmd.command.includes('touch') || cmd.command.includes('RELOAD_CALENDAR')
+            );
+
+            if (hasEventModification) {
+                addChatMessage('system', 'Refreshing calendar...');
+                setTimeout(() => location.reload(), 500);
+            }
+        }
     })
     .catch(() => addChatMessage('system', 'Failed to connect to AI'))
     .finally(() => {
@@ -2937,6 +3444,31 @@ function runAICommand() {
     .catch(() => printTerminal('Error executing command', false));
 }
 
+/* ═══ Mobile sidebar toggle ═══ */
+function toggleMobileSidebar() {
+    const sidebar = document.getElementById('sidebar');
+    const overlay = document.getElementById('mobileOverlay');
+    const btn = document.getElementById('mobileMenuBtn');
+
+    if (sidebar.classList.contains('mobile-open')) {
+        closeMobileSidebar();
+    } else {
+        sidebar.classList.add('mobile-open');
+        overlay.classList.add('active');
+        btn.textContent = '✕';
+    }
+}
+
+function closeMobileSidebar() {
+    const sidebar = document.getElementById('sidebar');
+    const overlay = document.getElementById('mobileOverlay');
+    const btn = document.getElementById('mobileMenuBtn');
+
+    sidebar.classList.remove('mobile-open');
+    overlay.classList.remove('active');
+    btn.textContent = '☰';
+}
+
 /* ═══ Keyboard shortcuts ═══ */
 document.addEventListener('keydown', (e) => {
     // Escape key
@@ -2974,6 +3506,74 @@ document.addEventListener('keydown', (e) => {
     }
 });
 
+/* ═══ Mobile Swipe Gestures ═══ */
+let touchStartX = 0;
+let touchStartY = 0;
+let touchEndX = 0;
+let touchEndY = 0;
+
+function handleSwipe() {
+    const diffX = touchEndX - touchStartX;
+    const diffY = touchEndY - touchStartY;
+    const minSwipeDistance = 50;
+
+    // Ignore vertical scrolling
+    if (Math.abs(diffY) > Math.abs(diffX)) return;
+
+    if (Math.abs(diffX) > minSwipeDistance) {
+        const params = new URLSearchParams(window.location.search);
+        const currentDate = params.get('date') || new Date().toISOString().split('T')[0];
+        const date = new Date(currentDate);
+
+        if (diffX > 0) {
+            // Swipe right - previous week
+            date.setDate(date.getDate() - 7);
+        } else {
+            // Swipe left - next week
+            date.setDate(date.getDate() + 7);
+        }
+
+        const newDate = date.toISOString().split('T')[0];
+        params.set('date', newDate);
+        window.location.search = params.toString();
+    }
+}
+
+function setupMobileGestures() {
+    if (window.innerWidth > 768) return; // Only on mobile
+
+    const calendarWrap = document.querySelector('.calendar-wrap');
+    if (!calendarWrap) return;
+
+    calendarWrap.addEventListener('touchstart', (e) => {
+        // Only handle swipes on the calendar background, not on events
+        if (e.target.classList.contains('event-card') ||
+            e.target.closest('.event-card')) {
+            return;
+        }
+        touchStartX = e.changedTouches[0].screenX;
+        touchStartY = e.changedTouches[0].screenY;
+    }, { passive: true });
+
+    calendarWrap.addEventListener('touchend', (e) => {
+        if (e.target.classList.contains('event-card') ||
+            e.target.closest('.event-card')) {
+            return;
+        }
+        touchEndX = e.changedTouches[0].screenX;
+        touchEndY = e.changedTouches[0].screenY;
+        handleSwipe();
+    }, { passive: true });
+
+    // Add haptic feedback on event tap (for supported devices)
+    document.addEventListener('click', (e) => {
+        const eventCard = e.target.closest('.event-card');
+        if (eventCard && 'vibrate' in navigator) {
+            navigator.vibrate(10); // Short vibration feedback
+        }
+    });
+}
+
 /* ═══ Init ═══ */
 window.addEventListener('DOMContentLoaded', () => {
     // Initialize terminal prompt from cookie
@@ -2990,6 +3590,9 @@ window.addEventListener('DOMContentLoaded', () => {
             })
             .catch(() => {});
     }
+
+    // Setup mobile swipe gestures
+    setupMobileGestures();
 
     // Initialize Flatpickr for date choosing window and hour inputs
     nDatePicker = flatpickr("#n_date", {

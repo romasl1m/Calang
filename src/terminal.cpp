@@ -3,6 +3,7 @@
 #include <sstream>
 #include <vector>
 #include <ctime>
+#include <algorithm>
 #include <nlohmann/json.hpp>
 #include "functions.h"
 
@@ -56,11 +57,47 @@ string parseAndFormatDateTime(const string &dateStr, const string &timeStr) {
     return dateStr + " " + timeStr;
 }
 
+// Vector to store dates from searches for AI to reference
+static vector<string> DATE_VECTOR;
+
 string process_terminal_command(const string &fullLine, const string &currentUsername, string &currentgroup) {
     if (fullLine.empty())
         return "";
 
-    stringstream ss(fullLine);
+    // Replace $DATE[n] with stored dates from vector
+    string processedLine = fullLine;
+    size_t pos = 0;
+    while ((pos = processedLine.find("$DATE", pos)) != string::npos) {
+        // Check if there's a bracket like $DATE[0]
+        if (pos + 5 < processedLine.length() && processedLine[pos + 5] == '[') {
+            size_t endBracket = processedLine.find(']', pos + 6);
+            if (endBracket != string::npos) {
+                string indexStr = processedLine.substr(pos + 6, endBracket - pos - 6);
+                try {
+                    int index = stoi(indexStr);
+                    if (index >= 0 && index < (int)DATE_VECTOR.size()) {
+                        processedLine.replace(pos, endBracket - pos + 1, DATE_VECTOR[index]);
+                    } else {
+                        processedLine.replace(pos, endBracket - pos + 1, getCurrentYear() + "-01-01");
+                    }
+                } catch (...) {
+                    processedLine.replace(pos, endBracket - pos + 1, getCurrentYear() + "-01-01");
+                }
+                pos += 10; // Move past the replacement
+                continue;
+            }
+        }
+        // $DATE without bracket - use first date if available
+        if (!DATE_VECTOR.empty()) {
+            processedLine.replace(pos, 5, DATE_VECTOR[0]);
+            pos += DATE_VECTOR[0].length();
+        } else {
+            processedLine.replace(pos, 5, getCurrentYear() + "-01-01");
+            pos += 10;
+        }
+    }
+
+    stringstream ss(processedLine);
     string cmd;
     ss >> cmd;
 
@@ -68,24 +105,195 @@ string process_terminal_command(const string &fullLine, const string &currentUse
 
     if (cmd == "clear") {
         return "CLEAR_SIGNAL";
+    } else if (cmd == "dates") {
+        output << "Stored dates in $DATE vector:\n";
+        if (DATE_VECTOR.empty()) {
+            output << "  (empty - use cat or grep to populate)\n";
+        } else {
+            for (size_t i = 0; i < DATE_VECTOR.size(); i++) {
+                output << "  [" << i << "] " << DATE_VECTOR[i] << "\n";
+            }
+            output << "\nUse $DATE or $DATE[n] in commands\n";
+        }
     } else if (cmd == "whoami") {
         output << currentUsername << "\n";
     } else if (cmd == "help") {
         output << "Available commands:\n"
-               << "  cat {YYYY-MM-DD}\n"
+               << "  cat {YYYY-MM-DD} - show events for a specific date\n"
+               << "  cat {number} - show next N events and set $DATE\n"
+               << "  grep \"text\" - find events containing text\n"
                << "  touch \"event name\" DD.MM HH:MM HH:MM \"description\" [P=priority] [T=recurrence] [S=subgroup]\n"
                << "  touch \"event name\" in DD.MM HH:MM length HH:MM \"description\" [P=priority] [T=recurrence] [S=subgroup]\n"
                << "  cd <group_name_or_id> - change to a specific group\n"
                << "  cd ~ or cd private - change to private calendar\n"
                << "  clear\n"
-               << "  whoami\n";
+               << "  whoami\n"
+               << "  dates - show stored dates from recent searches\n"
+               << "  $DATE or $DATE[n] - use stored dates in commands (0=first)\n";
     } else if (cmd == "cat") {
         string date;
         ss >> date;
-        if (date.length() == 5) {
-            date = getCurrentYear() + "-" + date;
+
+        // Check if it's a number (cat N for next N events)
+        bool isNumber = !date.empty() && all_of(date.begin(), date.end(), ::isdigit);
+
+        if (isNumber) {
+            int count = stoi(date);
+            vector<Event> allEvents = get_all_events(currentUsername);
+
+            // Get current time
+            time_t now = time(nullptr);
+            tm *currentTime = localtime(&now);
+            char currentDateStr[64];
+            strftime(currentDateStr, sizeof(currentDateStr), "%Y-%m-%d %H:%M", currentTime);
+            string nowStr = currentDateStr;
+
+            // Filter and sort upcoming events
+            vector<Event> upcomingEvents;
+            for (const auto &evt : allEvents) {
+                if (evt.start >= nowStr) {
+                    upcomingEvents.push_back(evt);
+                }
+            }
+
+            // Sort by start time
+            sort(upcomingEvents.begin(), upcomingEvents.end(),
+                 [](const Event &a, const Event &b) { return a.start < b.start; });
+
+            // Take first N events
+            int limit = min(count, (int)upcomingEvents.size());
+            output << "--- Next " << limit << " events ---\n";
+
+            // Clear and populate date vector
+            DATE_VECTOR.clear();
+            for (int i = 0; i < limit; i++) {
+                const Event &evt = upcomingEvents[i];
+                output << "ID: " << evt.id << "\n"
+                       << "  Title: " << evt.title << "\n"
+                       << "  Start: " << evt.start << "\n"
+                       << "  End: " << evt.end << "\n"
+                       << "  Description: " << evt.description << "\n";
+                if (!evt.subgroup.empty()) {
+                    output << "  Subgroup: " << evt.subgroup << "\n";
+                }
+                output << "\n";
+
+                // Add each event's date to the vector
+                DATE_VECTOR.push_back(evt.start.substr(0, 10)); // Extract YYYY-MM-DD
+            }
+
+            if (limit > 0) {
+                output << "Stored " << DATE_VECTOR.size() << " date(s) in $DATE vector\n";
+            }
+        } else {
+            // Original behavior - show events for specific date
+            if (date.length() == 5) {
+                date = getCurrentYear() + "-" + date;
+            }
+
+            vector<Event> allEvents = get_all_events(currentUsername);
+            vector<Event> dayEvents;
+
+            for (const auto &evt : allEvents) {
+                if (evt.start.substr(0, 10) == date) {
+                    dayEvents.push_back(evt);
+                }
+            }
+
+            output << "--- Events on " << date << " ---\n";
+            if (dayEvents.empty()) {
+                output << "No events found.\n";
+            } else {
+                // Clear and populate date vector with event dates
+                DATE_VECTOR.clear();
+                for (const auto &evt : dayEvents) {
+                    output << "ID: " << evt.id << "\n"
+                           << "  Title: " << evt.title << "\n"
+                           << "  Start: " << evt.start << "\n"
+                           << "  End: " << evt.end << "\n"
+                           << "  Description: " << evt.description << "\n";
+                    if (!evt.subgroup.empty()) {
+                        output << "  Subgroup: " << evt.subgroup << "\n";
+                    }
+                    output << "\n";
+
+                    // Add each unique date to vector
+                    string eventDate = evt.start.substr(0, 10);
+                    if (find(DATE_VECTOR.begin(), DATE_VECTOR.end(), eventDate) == DATE_VECTOR.end()) {
+                        DATE_VECTOR.push_back(eventDate);
+                    }
+                }
+
+                output << "Stored " << DATE_VECTOR.size() << " date(s) in $DATE vector\n";
+            }
         }
-        output << "--- This day events: " << date << " ---\n";
+    } else if (cmd == "grep") {
+        string remaining;
+        getline(ss, remaining);
+
+        // Remove leading/trailing whitespace
+        remaining = remaining.substr(remaining.find_first_not_of(" \t"));
+
+        // Remove quotes if present
+        if (!remaining.empty() && remaining.front() == '"' && remaining.back() == '"') {
+            remaining = remaining.substr(1, remaining.length() - 2);
+        }
+
+        if (remaining.empty()) {
+            output << "Usage: grep \"search text\"\n";
+            return output.str();
+        }
+
+        vector<Event> allEvents = get_all_events(currentUsername);
+        vector<Event> matchedEvents;
+
+        // Convert search text to lowercase for case-insensitive search
+        string searchLower = remaining;
+        transform(searchLower.begin(), searchLower.end(), searchLower.begin(), ::tolower);
+
+        for (const auto &evt : allEvents) {
+            string titleLower = evt.title;
+            string descLower = evt.description;
+            transform(titleLower.begin(), titleLower.end(), titleLower.begin(), ::tolower);
+            transform(descLower.begin(), descLower.end(), descLower.begin(), ::tolower);
+
+            if (titleLower.find(searchLower) != string::npos ||
+                descLower.find(searchLower) != string::npos) {
+                matchedEvents.push_back(evt);
+            }
+        }
+
+        output << "--- Found " << matchedEvents.size() << " events matching \"" << remaining << "\" ---\n";
+
+        if (matchedEvents.empty()) {
+            output << "No events found.\n";
+        } else {
+            // Sort by start time
+            sort(matchedEvents.begin(), matchedEvents.end(),
+                 [](const Event &a, const Event &b) { return a.start < b.start; });
+
+            // Clear and populate date vector with matched event dates
+            DATE_VECTOR.clear();
+            for (const auto &evt : matchedEvents) {
+                output << "ID: " << evt.id << "\n"
+                       << "  Title: " << evt.title << "\n"
+                       << "  Start: " << evt.start << "\n"
+                       << "  End: " << evt.end << "\n"
+                       << "  Description: " << evt.description << "\n";
+                if (!evt.subgroup.empty()) {
+                    output << "  Subgroup: " << evt.subgroup << "\n";
+                }
+                output << "\n";
+
+                // Add each unique date to vector
+                string eventDate = evt.start.substr(0, 10);
+                if (find(DATE_VECTOR.begin(), DATE_VECTOR.end(), eventDate) == DATE_VECTOR.end()) {
+                    DATE_VECTOR.push_back(eventDate);
+                }
+            }
+
+            output << "Stored " << DATE_VECTOR.size() << " date(s) in $DATE vector\n";
+        }
     } else if (cmd == "touch") {
         string remaining;
         getline(ss, remaining);

@@ -25,5 +25,18 @@
         "start": "16:47",
         "title": "abc",
         "user": "romasl1m"
+    },
+    {
+        "description": "none",
+        "end": "2026-06-12 15:00",
+        "id": "1781195002_383",
+        "origin": "1778875421",
+        "priority": "medium",
+        "recurrence": "none",
+        "recurrence_id": "1781195002_383",
+        "start": "2026-06-12 12:00",
+        "subgroup": "",
+        "title": "test",
+        "user": "romasl1m"
     }
 ]
