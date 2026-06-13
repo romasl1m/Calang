@@ -212,204 +212,85 @@
         .group-empty::before { display: none !important; }
         .group-empty::after  { display: none !important; }
 
-        /* ═══════════ VSCODE GROUP TREE ═══════════ */
-        .tree-container { padding: 0 4px; }
-        .tree-node { user-select: none; }
-        .tree-row {
-            display: flex;
-            align-items: center;
-            gap: 4px;
-            padding: 3px 6px;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 12px;
-            font-weight: 500;
-            color: var(--text-mid);
-            transition: background 0.1s, color 0.1s;
-            position: relative;
-        }
-        .tree-row:hover { background: rgba(255,255,255,0.04); color: var(--text); }
-        .tree-row.active { background: var(--accent-dim); color: var(--accent); }
-        .tree-row .tree-chevron {
-            width: 14px; height: 14px;
-            display: flex; align-items: center; justify-content: center;
-            flex-shrink: 0;
-            transition: transform 0.15s;
-            font-size: 9px;
-            opacity: 0.5;
-        }
-        .tree-row .tree-chevron.open { transform: rotate(90deg); }
-        .tree-row .tree-chevron.leaf { visibility: hidden; }
-        .tree-row .tree-icon {
-            width: 16px; height: 16px;
-            display: flex; align-items: center; justify-content: center;
-            flex-shrink: 0;
-            font-size: 12px;
-        }
-        .tree-row .tree-icon.folder { color: #e8b84a; }
-        .tree-row .tree-icon.folder.open { color: #f0c75e; }
-        .tree-row.active .tree-icon.folder { color: var(--purple-primary); }
-        .tree-row .tree-icon.subgroup { color: var(--blue-primary); }
-        .tree-row .tree-label {
-            flex: 1;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            font-size: 12px;
-        }
-        .tree-row .tree-badge {
-            font-size: 9px;
-            font-weight: 700;
-            padding: 1px 5px;
-            border-radius: 8px;
-            background: rgba(255,255,255,0.06);
-            color: var(--text-dim);
-            flex-shrink: 0;
-            font-family: 'JetBrains Mono', monospace;
-        }
-        .tree-row .tree-info-btn {
-            width: 18px; height: 18px;
-            display: none;
-            align-items: center;
-            justify-content: center;
-            flex-shrink: 0;
-            font-size: 11px;
-            color: var(--text-dim);
-            border-radius: 3px;
-            transition: color 0.1s, background 0.1s;
-        }
-        .tree-row:hover .tree-info-btn { display: flex; }
-        .tree-row .tree-info-btn:hover { color: var(--purple-primary); background: rgba(139, 92, 246, 0.1); }
-        .tree-row .tree-add-event {
-            width: 18px; height: 18px;
-            display: none;
-            align-items: center;
-            justify-content: center;
-            flex-shrink: 0;
-            font-size: 14px;
-            font-weight: 600;
-            color: var(--text-dim);
-            border-radius: 3px;
-            transition: color 0.1s, background 0.1s;
-            cursor: pointer;
-            margin-left: auto;
-        }
-        .tree-row:hover .tree-add-event { display: flex; }
-        .tree-row .tree-add-event:hover { color: var(--success); background: rgba(31,200,122,0.1); }
-        .tree-checkbox {
-            width: 14px; height: 14px;
-            cursor: pointer;
-            accent-color: var(--purple-primary);
-            flex-shrink: 0;
-            margin-right: 4px;
-        }
-        .tree-children {
-            overflow: hidden;
-            transition: max-height 0.2s ease;
-        }
-        .tree-children.collapsed { max-height: 0 !important; }
-        .tree-indent {
-            width: 1px;
-            background: rgba(255,255,255,0.06);
-            margin-left: 11px;
-            margin-right: 3px;
-            align-self: stretch;
-            flex-shrink: 0;
-        }
 
         /* ═══════════ GROUP INFO PANEL ═══════════ */
         .group-info-panel {
             position: fixed;
             top: 0;
-            right: -420px;
-            width: 400px;
+            right: -360px;
+            width: 340px;
             height: 100vh;
-            background: rgba(19, 23, 41, 0.95);
+            background: rgba(19, 23, 41, 0.98);
             backdrop-filter: blur(20px);
-            border-left: 1px solid rgba(139, 92, 246, 0.2);
+            border-left: 1px solid var(--border);
             z-index: 1100;
             display: flex;
             flex-direction: column;
             box-shadow: -8px 0 40px rgba(0,0,0,0.5);
-            transition: right 0.3s cubic-bezier(0.4,0,0.2,1);
+            transition: right 0.3s ease;
         }
         .group-info-panel.open { right: 0; }
-        .group-info-panel .gi-header {
-            padding: 16px 18px;
+        .gi-header {
+            padding: 18px;
             border-bottom: 1px solid var(--border);
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 12px;
             flex-shrink: 0;
         }
-        .group-info-panel .gi-header .gi-icon {
-            width: 36px; height: 36px;
-            border-radius: 8px;
-            background: linear-gradient(135deg, var(--purple-primary), var(--blue-primary));
-            display: flex; align-items: center; justify-content: center;
-            font-size: 18px;
-            color: white;
-            flex-shrink: 0;
-            border: 1px solid rgba(139, 92, 246, 0.3);
-            box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
-        }
-        .group-info-panel .gi-header .gi-title-block { flex: 1; min-width: 0; }
-        .group-info-panel .gi-header .gi-name {
-            font-size: 15px;
+        .gi-title-block { flex: 1; min-width: 0; }
+        .gi-name {
+            font-size: 16px;
             font-weight: 700;
             color: var(--text);
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
+            margin-bottom: 4px;
         }
-        .group-info-panel .gi-header .gi-id {
-            font-size: 10px;
+        .gi-id {
+            font-size: 11px;
             font-family: 'JetBrains Mono', monospace;
             color: var(--text-dim);
-            margin-top: 1px;
         }
         .gi-close {
-            width: 28px; height: 28px;
+            width: 32px; height: 32px;
             display: flex; align-items: center; justify-content: center;
             cursor: pointer;
             color: var(--text-dim);
-            border-radius: 5px;
-            transition: all 0.13s;
-            font-size: 14px;
+            border-radius: 6px;
+            transition: all 0.15s;
+            font-size: 18px;
             flex-shrink: 0;
         }
-        .gi-close:hover { color: var(--danger); background: rgba(232,65,90,0.1); }
+        .gi-close:hover { color: var(--text); background: rgba(255,255,255,0.05); }
         .gi-body {
             flex: 1;
             overflow-y: auto;
-            padding: 14px 18px;
+            padding: 18px;
         }
         .gi-body::-webkit-scrollbar { width: 4px; }
         .gi-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
-        .gi-section { margin-bottom: 18px; }
+        .gi-section { margin-bottom: 20px; }
         .gi-section-title {
-            font-size: 10px;
-            font-weight: 700;
+            font-size: 11px;
+            font-weight: 600;
             text-transform: uppercase;
-            letter-spacing: 0.12em;
+            letter-spacing: 0.1em;
             color: var(--text-dim);
-            margin-bottom: 8px;
-            padding-bottom: 5px;
-            border-bottom: 1px solid var(--border);
+            margin-bottom: 10px;
         }
         .gi-stat-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 8px;
+            gap: 10px;
         }
         .gi-stat-card {
-            background: rgba(255,255,255,0.02);
+            background: rgba(255,255,255,0.03);
             border: 1px solid var(--border);
-            border-radius: 7px;
-            padding: 10px 12px;
+            border-radius: 8px;
+            padding: 16px;
+            text-align: center;
         }
-        .gi-stat-card .gi-stat-val {
-            font-size: 20px;
+        .gi-stat-val {
+            font-size: 28px;
             font-weight: 700;
             font-family: 'JetBrains Mono', monospace;
             background: linear-gradient(135deg, var(--purple-primary), var(--blue-primary));
@@ -417,85 +298,63 @@
             -webkit-text-fill-color: transparent;
             background-clip: text;
         }
-        .gi-stat-card .gi-stat-label {
-            font-size: 10px;
+        .gi-stat-label {
+            font-size: 11px;
             font-weight: 600;
             color: var(--text-dim);
             text-transform: uppercase;
-            letter-spacing: 0.06em;
-            margin-top: 2px;
+            letter-spacing: 0.05em;
+            margin-top: 6px;
         }
-        .gi-member-list { display: flex; flex-direction: column; gap: 4px; }
         .gi-member {
             display: flex;
             align-items: center;
-            gap: 8px;
-            padding: 6px 8px;
-            border-radius: 5px;
+            gap: 12px;
+            padding: 8px;
+            border-radius: 6px;
             background: rgba(255,255,255,0.02);
             border: 1px solid var(--border);
-            transition: background 0.1s;
         }
-        .gi-member:hover { background: rgba(255,255,255,0.04); }
         .gi-member-avatar {
-            width: 24px; height: 24px;
+            width: 32px; height: 32px;
             border-radius: 50%;
-            background: linear-gradient(135deg, var(--accent-dim), rgba(79,94,240,0.15));
-            border: 1px solid var(--border);
+            background: linear-gradient(135deg, var(--purple-primary), var(--blue-primary));
             display: flex; align-items: center; justify-content: center;
-            font-size: 10px;
+            font-size: 14px;
             font-weight: 700;
-            color: var(--accent);
+            color: white;
             flex-shrink: 0;
-            text-transform: uppercase;
         }
         .gi-member-name {
-            font-size: 12px;
+            font-size: 14px;
             font-weight: 500;
             color: var(--text);
-            flex: 1;
-        }
-        .gi-member-role {
-            font-size: 9px;
-            font-weight: 700;
-            padding: 2px 6px;
-            border-radius: 8px;
-            text-transform: uppercase;
-            letter-spacing: 0.06em;
-        }
-        .gi-member-role.creator {
-            background: rgba(0,212,180,0.1);
-            color: var(--accent);
-        }
-        .gi-member-role.member {
-            background: rgba(255,255,255,0.04);
-            color: var(--text-dim);
         }
         .gi-id-copy-row {
             display: flex;
             align-items: center;
-            gap: 6px;
-            padding: 8px 10px;
-            background: rgba(255,255,255,0.02);
+            gap: 8px;
+            padding: 10px 12px;
+            background: rgba(255,255,255,0.03);
             border: 1px solid var(--border);
             border-radius: 6px;
         }
         .gi-id-copy-row code {
             font-family: 'JetBrains Mono', monospace;
-            font-size: 12px;
-            color: var(--text);
+            font-size: 11px;
+            color: var(--text-mid);
             flex: 1;
-            word-break: break-all;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
         .gi-copy-btn {
             background: linear-gradient(135deg, var(--purple-primary), var(--blue-primary));
-            border: 1px solid transparent;
+            border: none;
             color: white;
-            border-radius: 5px;
-            padding: 4px 8px;
-            font-size: 10px;
+            border-radius: 6px;
+            padding: 6px 12px;
+            font-size: 11px;
             font-weight: 600;
-            font-family: inherit;
             cursor: pointer;
             transition: all 0.15s;
             flex-shrink: 0;
@@ -504,30 +363,12 @@
             transform: translateY(-1px);
             box-shadow: 0 4px 12px rgba(139, 92, 246, 0.4);
         }
-        .gi-subgroup-tree { display: flex; flex-direction: column; gap: 2px; }
-        .gi-subgroup-row {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            padding: 5px 8px;
-            border-radius: 5px;
-            font-size: 12px;
-            color: var(--text-mid);
-            transition: background 0.1s;
-        }
-        .gi-subgroup-row:hover { background: rgba(255,255,255,0.03); }
-        .gi-subgroup-row .gi-sg-icon { color: var(--accent-2); font-size: 11px; flex-shrink: 0; }
-        .gi-empty-state {
-            font-size: 12px;
-            color: var(--text-dim);
-            font-style: italic;
-            padding: 6px 0;
-        }
         .gi-overlay {
             display: none;
             position: fixed;
             inset: 0;
-            background: rgba(0,0,0,0.4);
+            background: rgba(0,0,0,0.3);
+            backdrop-filter: blur(4px);
             z-index: 1099;
         }
         .gi-overlay.open { display: block; }
@@ -1059,6 +900,23 @@
             color: var(--success);
             margin-top: 1px;
         }
+        .event-card .priority-badge {
+            display: inline-block;
+            font-size: 10px;
+            font-weight: 700;
+            padding: 1px 5px;
+            border-radius: 3px;
+            margin-top: 1px;
+            margin-right: 2px;
+        }
+        .event-card .priority-badge.high {
+            background: rgba(239, 68, 68, 0.15);
+            color: var(--danger);
+        }
+        .event-card .priority-badge.low {
+            background: rgba(148, 163, 184, 0.12);
+            color: var(--text-dim);
+        }
 
         /* Current-time indicator */
         .now-line {
@@ -1496,25 +1354,6 @@
             border-top-color: var(--purple-primary) !important;
         }
 
-        /* Mobile groups toggle button */
-        .mobile-groups-toggle {
-            display: none;
-            background: transparent;
-            border: 1px solid var(--border);
-            color: var(--text-mid);
-            padding: 3px 7px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 10px;
-            transition: all 0.15s;
-        }
-        .mobile-groups-toggle:hover {
-            border-color: var(--purple-primary);
-            color: var(--purple-primary);
-        }
-        .mobile-groups-toggle.collapsed {
-            transform: rotate(-90deg);
-        }
 
         /* ═══════════ MOBILE & RESPONSIVE ═══════════ */
         @media (max-width: 768px) {
@@ -1536,23 +1375,6 @@
                 left: 0;
             }
 
-            /* Show mobile groups toggle button */
-            .mobile-groups-toggle {
-                display: inline-block;
-            }
-
-            /* Groups section collapsed by default on mobile */
-            #groups-section .tree-container {
-                max-height: 0;
-                overflow: hidden;
-                opacity: 0;
-                transition: max-height 0.3s ease, opacity 0.2s ease;
-            }
-            #groups-section.expanded .tree-container {
-                max-height: 500px;
-                opacity: 1;
-                overflow-y: auto;
-            }
 
             /* Make calendar larger on mobile - takes almost full page */
             .calendar-wrap {
@@ -2002,52 +1824,20 @@
         </div>
 
         <div class="sb-section" id="groups-section">
-            <div class="sb-label" style="display: flex; justify-content: space-between; align-items: center;">
-                <span>Explorer</span>
-                <button class="mobile-groups-toggle" id="mobileGroupsToggle" onclick="toggleGroupsSection(event)">▼</button>
-            </div>
-            <div class="tree-container" id="group-tree">
-                <div style="font-size:12px;color:var(--text-dim);padding:4px 6px;">Loading…</div>
-            </div>
+            <div class="sb-label">Groups</div>
+            <ul class="sb-menu" id="groups-list">
+                <li class="group-empty">Loading groups…</li>
+            </ul>
         </div>
 
         <div class="sb-forms">
-            <!-- AI Chat -->
+            <!-- Quick group actions -->
             <div class="sb-form-block">
-                <label>AI Assistant</label>
-                <div class="ai-chat-container" id="ai-chat-container">
-                    <div class="ai-chat-messages" id="ai-chat-messages"></div>
-                    <div class="ai-chat-input-row">
-                        <input type="text" class="ai-chat-input" id="ai-chat-input" placeholder="Ask anything…" maxlength="500">
-                        <button class="ai-chat-send" id="ai-chat-send" onclick="sendAIMessage()">→</button>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Create group -->
-            <div class="sb-form-block">
-                <label>New Group</label>
+                <label>Group Actions</label>
                 <div class="sb-row">
-                    <input type="text" class="sb-input" id="new-group-name" placeholder="Group name" maxlength="60">
-                    <button class="sb-btn" onclick="createGroup()">Create</button>
-                </div>
-            </div>
-
-            <!-- Join group -->
-            <div class="sb-form-block">
-                <label>Join Group</label>
-                <div class="sb-row">
-                    <input type="text" class="sb-input" id="join-group-id" placeholder="Group ID">
-                    <button class="sb-btn join" onclick="joinGroup()">Join</button>
-                </div>
-            </div>
-
-            <!-- Add subgroup -->
-            <div class="sb-form-block" id="subgroup-form" style="display:none;">
-                <label>Add Subgroup</label>
-                <div class="sb-row">
-                    <input type="text" class="sb-input" id="new-subgroup-name" placeholder="Subgroup name" maxlength="60">
-                    <button class="sb-btn" onclick="addSubgroup()">Add</button>
+                    <input type="text" class="sb-input" id="group-action-input" placeholder="Group name or ID">
+                    <button class="sb-btn" onclick="quickCreateGroup()" title="Create group">+</button>
+                    <button class="sb-btn join" onclick="quickJoinGroup()" title="Join group">→</button>
                 </div>
             </div>
         </div>
@@ -2068,6 +1858,7 @@
             <button class="tb-btn" onclick="openNewModal()">+ New event</button>
             <button class="tb-btn term" onclick="toggleTerminal()">_ terminal</button>
             <button class="tb-btn term mobile-term-btn" onclick="toggleTerminal()" style="display:none;">⌘</button>
+            <span class="week-badge" id="subgroupFilter" style="display:none; background: linear-gradient(135deg, var(--purple-primary), var(--blue-primary)); color: white; cursor: pointer;" onclick="clearSubgroupFilter()">📁 Loading... ✕</span>
             <span class="week-badge" id="weekBadge">W--</span>
         </div>
 
@@ -2113,7 +1904,6 @@
     <div id="groupInfoOverlay" class="gi-overlay" onclick="closeGroupInfo()"></div>
     <div id="groupInfoPanel" class="group-info-panel">
         <div class="gi-header">
-            <div class="gi-icon">○</div>
             <div class="gi-title-block">
                 <div class="gi-name" id="gi-name">—</div>
                 <div class="gi-id" id="gi-id-label">—</div>
@@ -2122,7 +1912,12 @@
         </div>
         <div class="gi-body">
             <div class="gi-section">
-                <div class="gi-section-title">Overview</div>
+                <div class="gi-id-copy-row">
+                    <code id="gi-group-id">—</code>
+                    <button class="gi-copy-btn" onclick="copyGroupId()">Copy ID</button>
+                </div>
+            </div>
+            <div class="gi-section">
                 <div class="gi-stat-grid">
                     <div class="gi-stat-card">
                         <div class="gi-stat-val" id="gi-member-count">0</div>
@@ -2135,34 +1930,23 @@
                 </div>
             </div>
             <div class="gi-section">
-                <div class="gi-section-title">Created</div>
-                <div style="font-size:12px;color:var(--text-mid);padding:4px 0;" id="gi-created-date">—</div>
-            </div>
-            <div class="gi-section">
-                <div class="gi-section-title">Group ID</div>
-                <div class="gi-id-copy-row">
-                    <code id="gi-group-id">—</code>
-                    <button class="gi-copy-btn" onclick="copyGroupId()">Copy</button>
-                </div>
-            </div>
-            <div class="gi-section">
-                <div class="gi-section-title">Creator</div>
+                <div class="gi-section-title">Owner</div>
                 <div id="gi-creator" class="gi-member">
                     <div class="gi-member-avatar">?</div>
                     <span class="gi-member-name">—</span>
-                    <span class="gi-member-role creator">Owner</span>
                 </div>
             </div>
-            <div class="gi-section">
-                <div class="gi-section-title">Members</div>
-                <div class="gi-member-list" id="gi-members-list">
-                    <div class="gi-empty-state">No members</div>
-                </div>
-            </div>
-            <div class="gi-section">
+            <div class="gi-section" id="gi-subgroups-section">
                 <div class="gi-section-title">Subgroups</div>
-                <div class="gi-subgroup-tree" id="gi-subgroups">
-                    <div class="gi-empty-state">No subgroups</div>
+                <div id="gi-subgroups-list" style="display:flex; flex-direction:column; gap:6px;">
+                    <div style="font-size:11px; color:var(--text-dim);">No subgroups</div>
+                </div>
+                <div class="sb-form-block" style="margin-top:12px;">
+                    <label>Add Subgroup</label>
+                    <div class="sb-row">
+                        <input type="text" class="sb-input" id="new-subgroup-name" placeholder="e.g., team1 or team1/sub1">
+                        <button class="sb-btn" onclick="addSubgroupToCurrentGroup()">+</button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -2240,7 +2024,13 @@
                 <div class="form-group">
                     <div class="adv-toggle" onclick="toggleAdvanced('n_adv_panel')">▶ Advanced</div>
                     <div id="n_adv_panel" class="adv-panel">
-                        <label>Recurrence</label>
+                        <label>Priority</label>
+                        <select class="form-control" name="priority" id="n_priority">
+                            <option value="low">Low</option>
+                            <option value="medium" selected>Medium</option>
+                            <option value="high">High</option>
+                        </select>
+                        <label style="margin-top:10px;">Recurrence</label>
                         <select class="form-control" name="recurrence" id="n_recurrence">
                             <option value="none">None (one-time)</option>
                             <option value="daily">Daily</option>
@@ -2320,6 +2110,30 @@
                         <label>Calendar</label>
                         <span id="d-origin-view" class="view-span"></span>
                         <select class="form-control edit-input" id="e_origin" name="origin" disabled></select>
+                    </div>
+                </div>
+
+                <div class="detail-row">
+                    <div class="detail-icon">S</div>
+                    <div class="detail-info">
+                        <label>Subgroup</label>
+                        <span id="d-subgroup-view" class="view-span"></span>
+                        <select class="form-control edit-input" id="e_subgroup" name="subgroup">
+                            <option value="">None</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="detail-row">
+                    <div class="detail-icon">P</div>
+                    <div class="detail-info">
+                        <label>Priority</label>
+                        <span id="d-priority-view" class="view-span"></span>
+                        <select class="form-control edit-input" id="e_priority" name="priority">
+                            <option value="low">Low</option>
+                            <option value="medium">Medium</option>
+                            <option value="high">High</option>
+                        </select>
                     </div>
                 </div>
 
@@ -2509,15 +2323,18 @@ function layoutEvents() {
 
             const origin = item.el.dataset.origin     || '';
             const recur  = item.el.dataset.recurrence || '';
+            const priority = item.el.dataset.priority || 'medium';
             const grpBadge = (origin && origin !== 'private')
                 ? `<span class="group-badge">${escHtml(origin)}</span>` : '';
             const recBadge = (recur && recur !== 'none' && recur !== '')
                 ? `<span class="recur-badge">↺</span>` : '';
+            const priorityBadge = priority === 'high' ? `<span class="priority-badge high">!</span>` :
+                                 priority === 'low' ? `<span class="priority-badge low">↓</span>` : '';
 
             item.el.innerHTML =
                 `<span class="ev-time">${item.sStr.substring(0,5)}</span>` +
                 `<div class="ev-title">${escHtml(item.el.dataset.title || '')}</div>` +
-                grpBadge + recBadge;
+                priorityBadge + grpBadge + recBadge;
             item.el.onclick = () => openDetailModal(item.el);
 
             active.push(item);
@@ -2578,8 +2395,8 @@ function switchView(name) {
     p.set('view', name);
     if (name === 'all' || name === 'private') {
         currentGroupId = null;
-        document.getElementById('subgroup-form').style.display = 'none';
-        document.getElementById('subgroups-section').style.display = 'none';
+    } else {
+        currentGroupId = name;
     }
     window.location.search = p.toString();
 }
@@ -2589,16 +2406,16 @@ function toggleAdvanced(id) {
     el.style.display = el.style.display === 'block' ? 'none' : 'block';
 }
 
-/* ═══ Groups & Tree ═══ */
+/* ═══ Groups ═══ */
 let cachedGroups = [];
 let currentGroupId = null;
-let treeExpandState = {}; // remembers open/closed state per group id
 
 function loadGroups() {
     fetch('/api/my_groups')
     .then(r => r.json())
     .then(groups => {
         cachedGroups = groups;
+        const list = document.getElementById('groups-list');
         const sel  = document.getElementById('n_origin');
         const view = new URLSearchParams(window.location.search).get('view') || 'all';
 
@@ -2607,196 +2424,100 @@ function loadGroups() {
 
         if (sel) sel.innerHTML = '<option value="private">Private</option>';
 
-        // Populate the tree
-        buildGroupTree(groups, view);
+        // Populate simple group list
+        if (!groups.length) {
+            list.innerHTML = '<li class="group-empty">No groups yet</li>';
+        } else {
+            list.innerHTML = '';
+            groups.forEach(g => {
+                const li = document.createElement('li');
+                li.textContent = g.name;
+                li.classList.toggle('active', view === g.id);
+                li.onclick = () => switchView(g.id);
 
-        // Populate origin select
-        groups.forEach(g => {
-            if (sel) {
-                const opt = document.createElement('option');
-                opt.value = g.id;
-                opt.textContent = g.name;
-                sel.appendChild(opt);
-            }
-            if (view === g.id) {
-                currentGroupId = g.id;
-                document.getElementById('subgroup-form').style.display = 'block';
-            }
-        });
-    })
-    .catch(() => {
-        document.getElementById('group-tree').innerHTML = '<div style="font-size:12px;color:var(--text-dim);padding:4px 6px;">Error loading</div>';
-    });
-}
+                // Right-click to view info
+                li.oncontextmenu = (e) => {
+                    e.preventDefault();
+                    openGroupInfo(g.id);
+                };
+                list.appendChild(li);
 
-/* ── VSCode-style tree builder ── */
-function buildGroupTree(groups, activeView) {
-    const container = document.getElementById('group-tree');
-    container.innerHTML = '';
+                // Populate origin select
+                if (sel) {
+                    const opt = document.createElement('option');
+                    opt.value = g.id;
+                    opt.textContent = g.name;
+                    sel.appendChild(opt);
+                }
 
-    if (!groups.length) {
-        container.innerHTML = '<div style="font-size:12px;color:var(--text-dim);padding:4px 6px;font-style:italic;">No groups yet</div>';
-        return;
-    }
-
-    groups.forEach(g => {
-        const node = document.createElement('div');
-        node.className = 'tree-node';
-
-        // Fetch detailed info for subgroups
-        const hasSubgroups = g.subgroups && (
-            (Array.isArray(g.subgroups) && g.subgroups.length > 0) ||
-            (typeof g.subgroups === 'object' && Object.keys(g.subgroups).length > 0)
-        );
-
-        const isOpen = treeExpandState[g.id] !== undefined ? treeExpandState[g.id] : (activeView === g.id);
-        if (activeView === g.id) treeExpandState[g.id] = true;
-
-        // Group row
-        const row = document.createElement('div');
-        row.className = 'tree-row' + (activeView === g.id ? ' active' : '');
-
-        // Count subgroups for badge
-        let subgroupCount = 0;
-        if (Array.isArray(g.subgroups)) {
-            subgroupCount = g.subgroups.length;
-        } else if (typeof g.subgroups === 'object') {
-            subgroupCount = Object.keys(g.subgroups).length;
-        }
-
-        const badge = subgroupCount > 0 ? `<span class="tree-badge">${subgroupCount}</span>` : '';
-
-        row.innerHTML = `
-            <input type="checkbox" class="tree-checkbox" checked onchange="toggleGroupVisibility('${g.id}', this.checked)">
-            <span class="tree-chevron ${hasSubgroups ? (isOpen ? 'open' : '') : 'leaf'}">▶</span>
-            <span class="tree-icon folder ${isOpen ? 'open' : ''}">○</span>
-            <span class="tree-label">${escHtml(g.name)}</span>
-            ${badge}
-            <span class="tree-info-btn" title="Group info">i</span>
-        `;
-
-        // Click on row → navigate to group view
-        row.addEventListener('click', (e) => {
-            if (e.target.classList.contains('tree-info-btn')) return;
-            if (e.target.classList.contains('tree-checkbox')) return;
-            currentGroupId = g.id;
-            document.getElementById('subgroup-form').style.display = 'block';
-            switchView(g.id);
-        });
-
-        // Click on info button → open info panel
-        row.querySelector('.tree-info-btn').addEventListener('click', (e) => {
-            e.stopPropagation();
-            openGroupInfo(g.id);
-        });
-
-        // Click on chevron → toggle expand/collapse
-        const chevron = row.querySelector('.tree-chevron');
-        if (hasSubgroups) {
-            chevron.addEventListener('click', (e) => {
-                e.stopPropagation();
-                const children = node.querySelector('.tree-children');
-                const folderIcon = row.querySelector('.tree-icon.folder');
-                if (children) {
-                    const collapsed = children.classList.toggle('collapsed');
-                    chevron.classList.toggle('open', !collapsed);
-                    folderIcon.classList.toggle('open', !collapsed);
-                    treeExpandState[g.id] = !collapsed;
+                if (view === g.id) {
+                    currentGroupId = g.id;
                 }
             });
         }
-
-        node.appendChild(row);
-
-        // Subgroup children
-        if (hasSubgroups) {
-            const childrenDiv = document.createElement('div');
-            childrenDiv.className = 'tree-children' + (isOpen ? '' : ' collapsed');
-            renderSubgroupNodes(g.subgroups, childrenDiv, g.id, 1);
-            node.appendChild(childrenDiv);
-        }
-
-        container.appendChild(node);
+    })
+    .catch(() => {
+        document.getElementById('groups-list').innerHTML = '<li class="group-empty">Error loading</li>';
     });
 }
 
-function renderSubgroupNodes(subgroups, parentEl, groupId, depth) {
-    if (Array.isArray(subgroups)) {
-        subgroups.forEach(sg => {
-            const row = document.createElement('div');
-            row.className = 'tree-row';
-            row.style.paddingLeft = (6 + depth * 16) + 'px';
-            row.innerHTML = `
-                <input type="checkbox" class="tree-checkbox" checked onchange="toggleSubgroupVisibility('${groupId}', '${sg}', this.checked)">
-                <span class="tree-chevron leaf">▶</span>
-                <span class="tree-icon subgroup">·</span>
-                <span class="tree-label">${escHtml(sg)}</span>
-                <span class="tree-add-event" title="Add event" onclick="openNewModalForSubgroup('${groupId}', '${sg}')">+</span>
-            `;
-            row.addEventListener('click', (e) => {
-                if (e.target.classList.contains('tree-checkbox')) return;
-                if (e.target.classList.contains('tree-add-event')) return;
-                filterBySubgroup(groupId, sg);
-            });
-            parentEl.appendChild(row);
-        });
-    } else if (typeof subgroups === 'object') {
-        Object.keys(subgroups).forEach(key => {
-            const val = subgroups[key];
-            const hasChildren = val && typeof val === 'object' && Object.keys(val).length > 0;
-            const subNode = document.createElement('div');
-            subNode.className = 'tree-node';
-
-            const row = document.createElement('div');
-            row.className = 'tree-row';
-            row.style.paddingLeft = (6 + depth * 16) + 'px';
-
-            row.innerHTML = `
-                <input type="checkbox" class="tree-checkbox" checked onchange="toggleSubgroupVisibility('${groupId}', '${key}', this.checked)">
-                <span class="tree-chevron ${hasChildren ? '' : 'leaf'}">▶</span>
-                <span class="tree-icon ${hasChildren ? 'folder' : 'subgroup'}">${hasChildren ? '○' : '·'}</span>
-                <span class="tree-label">${escHtml(key)}</span>
-                ${hasChildren ? '' : `<span class="tree-add-event" title="Add event" onclick="openNewModalForSubgroup('${groupId}', '${key}')">+</span>`}
-            `;
-
-            if (hasChildren) {
-                const childrenDiv = document.createElement('div');
-                childrenDiv.className = 'tree-children collapsed';
-                renderSubgroupNodes(val, childrenDiv, groupId, depth + 1);
-
-                const chevron = row.querySelector('.tree-chevron');
-                chevron.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    const collapsed = childrenDiv.classList.toggle('collapsed');
-                    chevron.classList.toggle('open', !collapsed);
-                    const icon = row.querySelector('.tree-icon');
-                    icon.classList.toggle('open', !collapsed);
-                });
-
-                subNode.appendChild(row);
-                subNode.appendChild(childrenDiv);
-            } else {
-                row.addEventListener('click', (e) => {
-                    if (e.target.classList.contains('tree-checkbox')) return;
-                    if (e.target.classList.contains('tree-add-event')) return;
-                    filterBySubgroup(groupId, key);
-                });
-                subNode.appendChild(row);
-            }
-
-            parentEl.appendChild(subNode);
-        });
+/* Quick group actions */
+function quickCreateGroup() {
+    const input = document.getElementById('group-action-input');
+    const name = input.value.trim();
+    if (!name) {
+        alert('Enter a group name');
+        return;
     }
+    createGroupWithName(name);
+    input.value = '';
 }
 
-function filterBySubgroup(groupId, subgroup) {
-    console.log('Filtering by subgroup:', groupId, subgroup);
+function quickJoinGroup() {
+    const input = document.getElementById('group-action-input');
+    const id = input.value.trim();
+    if (!id) {
+        alert('Enter a group ID');
+        return;
+    }
+    joinGroupWithId(id);
+    input.value = '';
+}
+
+function createGroupWithName(name) {
+    fetch('/api/create_group', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: 'group_name=' + encodeURIComponent(name)
+    })
+    .then(r => r.json())
+    .then(() => {
+        loadGroups();
+        alert('Group created! ID copied to clipboard.');
+    })
+    .catch(() => alert('Failed to create group'));
+}
+
+function joinGroupWithId(id) {
+    fetch('/api/join_group', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: 'group_id=' + encodeURIComponent(id)
+    })
+    .then(() => {
+        loadGroups();
+        alert('Joined group!');
+    })
+    .catch(() => alert('Failed to join group'));
 }
 
 /* ── Group Info Panel ── */
+let currentOpenGroupId = null;
+
 function openGroupInfo(groupId) {
     const panel = document.getElementById('groupInfoPanel');
     const overlay = document.getElementById('groupInfoOverlay');
+    currentOpenGroupId = groupId;
 
     // Show panel with loading state
     document.getElementById('gi-name').textContent = 'Loading…';
@@ -2804,10 +2525,9 @@ function openGroupInfo(groupId) {
     document.getElementById('gi-member-count').textContent = '—';
     document.getElementById('gi-event-count').textContent = '—';
     document.getElementById('gi-group-id').textContent = groupId;
-    document.getElementById('gi-members-list').innerHTML = '<div class="gi-empty-state">Loading…</div>';
-    document.getElementById('gi-subgroups').innerHTML = '<div class="gi-empty-state">Loading…</div>';
     document.getElementById('gi-creator').querySelector('.gi-member-name').textContent = '—';
     document.getElementById('gi-creator').querySelector('.gi-member-avatar').textContent = '?';
+    document.getElementById('gi-subgroups-list').innerHTML = '<div style="font-size:11px; color:var(--text-dim);">Loading…</div>';
 
     panel.classList.add('open');
     overlay.classList.add('open');
@@ -2816,95 +2536,82 @@ function openGroupInfo(groupId) {
     .then(r => r.json())
     .then(data => {
         document.getElementById('gi-name').textContent = data.name || 'Unnamed';
-        document.getElementById('gi-id-label').textContent = 'ID: ' + data.id;
+        document.getElementById('gi-id-label').textContent = data.id || '—';
         document.getElementById('gi-member-count').textContent = data.member_count || 0;
         document.getElementById('gi-event-count').textContent = data.event_count || 0;
         document.getElementById('gi-group-id').textContent = data.id;
-
-        // Format created date from timestamp ID
-        try {
-            const timestamp = parseInt(data.id);
-            if (!isNaN(timestamp)) {
-                const date = new Date(timestamp * 1000);
-                const formatted = date.toLocaleDateString('en-US', {
-                    year: 'numeric',
-                    month: 'long',
-                    day: 'numeric',
-                    hour: '2-digit',
-                    minute: '2-digit'
-                });
-                document.getElementById('gi-created-date').textContent = formatted;
-            } else {
-                document.getElementById('gi-created-date').textContent = 'Unknown';
-            }
-        } catch (e) {
-            document.getElementById('gi-created-date').textContent = 'Unknown';
-        }
 
         // Creator
         const creator = data.creator || '—';
         document.getElementById('gi-creator').querySelector('.gi-member-name').textContent = creator;
         document.getElementById('gi-creator').querySelector('.gi-member-avatar').textContent = creator.charAt(0).toUpperCase();
 
-        // Members
-        const membersEl = document.getElementById('gi-members-list');
-        const members = data.members || [];
-        if (!members.length) {
-            membersEl.innerHTML = '<div class="gi-empty-state">No members</div>';
-        } else {
-            membersEl.innerHTML = '';
-            members.forEach(m => {
-                const isCreator = m === creator;
-                const div = document.createElement('div');
-                div.className = 'gi-member';
-                div.innerHTML = `
-                    <div class="gi-member-avatar">${escHtml(m.charAt(0).toUpperCase())}</div>
-                    <span class="gi-member-name">${escHtml(m)}</span>
-                    <span class="gi-member-role ${isCreator ? 'creator' : 'member'}">${isCreator ? 'Owner' : 'Member'}</span>
-                `;
-                membersEl.appendChild(div);
-            });
-        }
-
-        // Subgroups
-        const sgEl = document.getElementById('gi-subgroups');
-        const sgs = data.subgroups;
-        if (!sgs || (Array.isArray(sgs) && !sgs.length) || (typeof sgs === 'object' && !Object.keys(sgs).length)) {
-            sgEl.innerHTML = '<div class="gi-empty-state">No subgroups</div>';
-        } else {
-            sgEl.innerHTML = '';
-            renderInfoSubgroups(sgs, sgEl, 0);
-        }
+        // Display subgroups
+        displaySubgroupsInPanel(data.subgroups || {});
     })
     .catch(() => {
         document.getElementById('gi-name').textContent = 'Error';
-        document.getElementById('gi-members-list').innerHTML = '<div class="gi-empty-state">Failed to load</div>';
+        document.getElementById('gi-id-label').textContent = 'Failed to load';
     });
 }
 
-function renderInfoSubgroups(node, parentEl, depth) {
-    if (Array.isArray(node)) {
-        node.forEach(sg => {
-            const row = document.createElement('div');
-            row.className = 'gi-subgroup-row';
-            row.style.paddingLeft = (8 + depth * 14) + 'px';
-            row.innerHTML = `<span class="gi-sg-icon">·</span> ${escHtml(sg)}`;
-            parentEl.appendChild(row);
-        });
-    } else if (typeof node === 'object') {
-        Object.keys(node).forEach(key => {
-            const val = node[key];
-            const hasChildren = val && typeof val === 'object' && Object.keys(val).length > 0;
-            const row = document.createElement('div');
-            row.className = 'gi-subgroup-row';
-            row.style.paddingLeft = (8 + depth * 14) + 'px';
-            row.innerHTML = `<span class="gi-sg-icon">${hasChildren ? '○' : '·'}</span> ${escHtml(key)}`;
-            parentEl.appendChild(row);
-            if (hasChildren) {
-                renderInfoSubgroups(val, parentEl, depth + 1);
-            }
-        });
+function displaySubgroupsInPanel(subgroups) {
+    const container = document.getElementById('gi-subgroups-list');
+    container.innerHTML = '';
+
+    const flatSubgroups = [];
+    function flattenSubgroupsDisplay(node, prefix = '', level = 0) {
+        if (typeof node === 'object' && node !== null && !Array.isArray(node)) {
+            Object.keys(node).forEach(key => {
+                const path = prefix ? `${prefix}/${key}` : key;
+                flatSubgroups.push({ path, level });
+                flattenSubgroupsDisplay(node[key], path, level + 1);
+            });
+        }
     }
+    flattenSubgroupsDisplay(subgroups);
+
+    if (flatSubgroups.length === 0) {
+        container.innerHTML = '<div style="font-size:11px; color:var(--text-dim);">No subgroups</div>';
+        return;
+    }
+
+    flatSubgroups.forEach(sg => {
+        const row = document.createElement('div');
+        row.style.cssText = 'display:flex; align-items:center; gap:8px; padding:6px 8px; background:rgba(255,255,255,0.02); border:1px solid var(--border); border-radius:6px; cursor:pointer; transition:all 0.15s;';
+        row.style.paddingLeft = (8 + sg.level * 16) + 'px';
+
+        row.onmouseenter = () => { row.style.background = 'rgba(255,255,255,0.05)'; };
+        row.onmouseleave = () => { row.style.background = 'rgba(255,255,255,0.02)'; };
+
+        const icon = document.createElement('span');
+        icon.textContent = '📁';
+        icon.style.fontSize = '14px';
+
+        const name = document.createElement('span');
+        name.textContent = sg.path.split('/').pop();
+        name.style.cssText = 'flex:1; font-size:12px; color:var(--text); font-weight:500;';
+
+        const viewBtn = document.createElement('button');
+        viewBtn.textContent = '👁';
+        viewBtn.style.cssText = 'background:none; border:none; color:var(--text-mid); font-size:14px; cursor:pointer; padding:2px 6px; border-radius:4px; transition:all 0.15s;';
+        viewBtn.title = 'View events';
+        viewBtn.onmouseenter = () => { viewBtn.style.background = 'rgba(139,92,246,0.1)'; viewBtn.style.color = 'var(--accent)'; };
+        viewBtn.onmouseleave = () => { viewBtn.style.background = 'none'; viewBtn.style.color = 'var(--text-mid)'; };
+        viewBtn.onclick = (e) => {
+            e.stopPropagation();
+            filterEventsBySubgroup(currentOpenGroupId, sg.path);
+        };
+
+        row.appendChild(icon);
+        row.appendChild(name);
+        row.appendChild(viewBtn);
+        row.onclick = () => {
+            openNewModalForSubgroup(currentOpenGroupId, sg.path);
+        };
+
+        container.appendChild(row);
+    });
 }
 
 function closeGroupInfo() {
@@ -2974,6 +2681,61 @@ function addSubgroup() {
         }
         else alert('Failed to add subgroup.');
     });
+}
+
+function addSubgroupToCurrentGroup() {
+    const input = document.getElementById('new-subgroup-name');
+    const name = input.value.trim();
+    if (!name || !currentOpenGroupId) {
+        alert('Please enter a subgroup name');
+        return;
+    }
+
+    fetch('/api/add_subgroup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: 'group_id=' + encodeURIComponent(currentOpenGroupId) + '&name=' + encodeURIComponent(name)
+    }).then(r => {
+        if (r.ok) {
+            input.value = '';
+            alert('Subgroup added!');
+            // Reload group info
+            openGroupInfo(currentOpenGroupId);
+            loadGroups();
+        }
+        else alert('Failed to add subgroup.');
+    });
+}
+
+function filterEventsBySubgroup(groupId, subgroup) {
+    // Close the panel
+    closeGroupInfo();
+
+    // Switch to the group view
+    const params = new URLSearchParams(window.location.search);
+    params.set('view', groupId);
+    params.set('subgroup', subgroup);
+    window.location.search = params.toString();
+}
+
+function clearSubgroupFilter() {
+    const params = new URLSearchParams(window.location.search);
+    params.delete('subgroup');
+    window.location.search = params.toString();
+}
+
+function updateSubgroupFilterBadge() {
+    const params = new URLSearchParams(window.location.search);
+    const subgroup = params.get('subgroup');
+    const badge = document.getElementById('subgroupFilter');
+
+    if (subgroup) {
+        badge.textContent = `📁 ${subgroup} ✕`;
+        badge.style.display = 'inline-block';
+        badge.title = 'Click to clear subgroup filter';
+    } else {
+        badge.style.display = 'none';
+    }
 }
 
 function updateSubgroupOptions(selectId, groupId) {
@@ -3163,6 +2925,13 @@ function openDetailModal(card) {
     document.getElementById('d-desc').textContent        = d.description || 'No description';
     document.getElementById('d-origin-view').textContent = originLabel;
 
+    const subgroupVal = d.subgroup || '';
+    document.getElementById('d-subgroup-view').textContent = subgroupVal || 'None';
+
+    const priorityVal = d.priority || 'medium';
+    const priorityLabels = {low: 'Low', medium: 'Medium', high: 'High'};
+    document.getElementById('d-priority-view').textContent = priorityLabels[priorityVal] || 'Medium';
+
     document.getElementById('d-title-input').value = d.title || '';
     document.getElementById('e_date').value        = startDate;
     document.getElementById('e_start').value       = startTime;
@@ -3175,6 +2944,11 @@ function openDetailModal(card) {
     const eOrigin = document.getElementById('e_origin');
     eOrigin.innerHTML = `<option value="${escHtml(originVal)}">${escHtml(originLabel)}</option>`;
     eOrigin.value = originVal;
+
+    updateSubgroupOptions('e_subgroup', originVal);
+    document.getElementById('e_subgroup').value = subgroupVal;
+
+    document.getElementById('e_priority').value = priorityVal;
 
     document.getElementById('d-desc-input').value  = d.description || '';
     document.getElementById('e_recurrence').value  = d.recurrence || 'none';
@@ -3632,6 +3406,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
     layoutEvents();
     updateWeekNumber();
+    updateSubgroupFilterBadge();
     loadGroups();
     drawNowLine();
     setInterval(drawNowLine, 60000); // refresh every minute

@@ -99,6 +99,9 @@ void dashboard(crow::SimpleApp &app) {
         string view = req.url_params.get("view") != nullptr ? req.url_params.get("view") : "all";
         replace_tag("{{current_view}}", view);
 
+        // Get subgroup filter if any
+        string subgroup_filter = req.url_params.get("subgroup") != nullptr ? req.url_params.get("subgroup") : "";
+
         vector<Event> events;
         if (view == "private") {
             events = get_user_event(username);
@@ -107,6 +110,17 @@ void dashboard(crow::SimpleApp &app) {
         } else {
             json g = {{"id", view}};
             get_group_events(g, events);
+        }
+
+        // Filter by subgroup if specified
+        if (not subgroup_filter.empty() and view != "private" and view != "all") {
+            vector<Event> filtered;
+            for (const auto &e : events) {
+                if (e.subgroup == subgroup_filter) {
+                    filtered.push_back(e);
+                }
+            }
+            events = filtered;
         }
 
         string events_html;
@@ -147,6 +161,7 @@ void dashboard(crow::SimpleApp &app) {
                     events_html += "data-end=\"" + end_time + "\" ";
                     events_html += "data-origin=\"" + e.origin + "\" ";
                     events_html += "data-recurrence=\"" + e.recurrence + "\" ";
+                    events_html += "data-priority=\"" + e.priority + "\" ";
                     events_html += "data-subgroup=\"" + e.subgroup + "\">";
                     events_html += "  <span class='time'>" + start_time + " - " + end_time + "</span>";
                     events_html += "  <span class='title'>" + dec_title + "</span>";

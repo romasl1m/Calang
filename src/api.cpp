@@ -100,13 +100,14 @@ void api_routes(crow::SimpleApp &app) {
         string priority = urlDecode(getParam(req.body, "priority"));
         if (priority.empty())
             priority = "medium";
+        string subgroup = urlDecode(getParam(req.body, "subgroup"));
         string cookie_header = req.get_header_value("Cookie");
         string user = get_logged_in_user(cookie_header);
 
         if (user.empty())
             return crow::response(401, "Nie zalogowano");
 
-        edit_event(title, id, start, end, user, description, origin, recurrence, edit_all, priority);
+        edit_event(title, id, start, end, user, description, origin, recurrence, edit_all, priority, subgroup);
 
         crow::response res;
         res.code = 302;

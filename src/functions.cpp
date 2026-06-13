@@ -224,7 +224,7 @@ void delete_event(const string &id, const string &user, const string &origin, bo
     fout << filtered.dump(4);
     fout.close();
 }
-void edit_event(const string &title, const string &id, const string &start, const string &end, const string &user, const string &description, const string &origin, const string &recurrence, bool edit_all, const string &priority) {
+void edit_event(const string &title, const string &id, const string &start, const string &end, const string &user, const string &description, const string &origin, const string &recurrence, bool edit_all, const string &priority, const string &subgroup) {
     string path = (origin == "private") ? "users/" + user + "/events.json" : "groups/" + origin + "/events.json";
     if (not filesystem::exists(path))
         return;
@@ -262,7 +262,7 @@ void edit_event(const string &title, const string &id, const string &start, cons
         fout.close();
 
         string new_base_id = to_string(time(0)) + "_" + to_string(rand() % 1000);
-        add_new_event(title, new_base_id, start, end, user, description, origin, recurrence, "", priority, "");
+        add_new_event(title, new_base_id, start, end, user, description, origin, recurrence, "", priority, subgroup);
         return;
     }
 
@@ -275,6 +275,7 @@ void edit_event(const string &title, const string &id, const string &start, cons
             item["description"] = description;
             item["recurrence"] = recurrence;
             item["priority"] = priority;
+            item["subgroup"] = subgroup;
             updated = true;
             break;
         }
