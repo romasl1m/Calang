@@ -17,6 +17,7 @@ add_executable(calang
     src/event.cpp
     src/terminal.cpp
     src/ai_assistant.cpp
+    src/google_oauth.cpp
 )
 
 # target_include_directories(calang PRIVATE src)

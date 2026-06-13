@@ -4,6 +4,7 @@
 #include "core_routes.h"
 #include "api.h"
 #include "login.h"
+#include "google_oauth.h"
 #include <cstdlib>
 // #include <string>
 int main() {
@@ -12,6 +13,7 @@ int main() {
     core_routes(app);
     register_auth_routes(app);
     login_logout_routes(app);
+    register_google_oauth_routes(app);
     dashboard(app);
     api_routes(app);
 

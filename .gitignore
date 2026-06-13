@@ -5,6 +5,7 @@ users/
 users.json
 build/
 .gemini_config
+.env
 
 compile_commands.json
 *.o
