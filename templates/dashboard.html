@@ -1831,6 +1831,20 @@
         </div>
 
         <div class="sb-forms">
+            <!-- AI Chat Interface -->
+            <div class="sb-form-block">
+                <label>AI Assistant</label>
+                <div class="ai-chat-container">
+                    <div class="ai-chat-messages" id="ai-chat-messages">
+                        <!-- Messages will be added here by JavaScript -->
+                    </div>
+                    <div class="ai-chat-input-row">
+                        <input type="text" class="ai-chat-input" id="ai-chat-input" placeholder="Ask me anything...">
+                        <button class="ai-chat-send" id="ai-chat-send" onclick="sendAIMessage()">→</button>
+                    </div>
+                </div>
+            </div>
+
             <!-- Quick group actions -->
             <div class="sb-form-block">
                 <label>Group Actions</label>

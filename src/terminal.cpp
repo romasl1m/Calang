@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <nlohmann/json.hpp>
 #include "functions.h"
+#include "ai_assistant.h"
 
 using namespace std;
 using json = nlohmann::json;
@@ -124,11 +125,14 @@ string process_terminal_command(const string &fullLine, const string &currentUse
                << "  grep \"text\" - find events containing text\n"
                << "  touch \"event name\" DD.MM HH:MM HH:MM \"description\" [P=priority] [T=recurrence] [S=subgroup]\n"
                << "  touch \"event name\" in DD.MM HH:MM length HH:MM \"description\" [P=priority] [T=recurrence] [S=subgroup]\n"
-               << "  cd <group_name_or_id> - change to a specific group\n"
+               << "  cd <group_name_or_id>[/subgroup] - change to a group or subgroup\n"
                << "  cd ~ or cd private - change to private calendar\n"
+               << "  ls - list available groups and subgroups\n"
                << "  clear\n"
                << "  whoami\n"
                << "  dates - show stored dates from recent searches\n"
+               << "  ai \"natural language request\" - use AI to execute commands\n"
+               << "  rm <event_id> - delete an event\n"
                << "  $DATE or $DATE[n] - use stored dates in commands (0=first)\n";
     } else if (cmd == "cat") {
         string date;
@@ -308,9 +312,21 @@ string process_terminal_command(const string &fullLine, const string &currentUse
         string recurrence = "none";
         string priority = "medium";
 
-        // KLUCZOWA ZMIANA: Domyślnie używa wejścia z komendy 'cd'
-        string origin = currentgroup.empty() ? "private" : currentgroup;
+        // Parse currentgroup to separate group_id and subgroup path
+        string origin = "private";
         string subgroup = "";
+
+        if (!currentgroup.empty()) {
+            size_t slashPos = currentgroup.find('/');
+            if (slashPos != string::npos) {
+                // currentgroup contains "group_id/subgroup/path"
+                origin = currentgroup.substr(0, slashPos);
+                subgroup = currentgroup.substr(slashPos + 1);
+            } else {
+                // currentgroup is just group_id
+                origin = currentgroup;
+            }
+        }
 
         bool isLengthFormat = false;
         for (size_t i = 0; i < args.size(); i++) {
@@ -439,6 +455,49 @@ string process_terminal_command(const string &fullLine, const string &currentUse
         if (not subgroup.empty()) {
             output << "-> Subgr: " << subgroup << "\n";
         }
+    } else if (cmd == "ls") {
+        vector<json> groups = get_user_groups(currentUsername);
+
+        if (groups.empty()) {
+            output << "No groups found.\n";
+        } else {
+            output << "Available groups:\n";
+            for (const auto &g : groups) {
+                string groupName = g.value("name", "");
+                string groupId = g.value("id", "");
+                output << "  " << groupName << " (id: " << groupId << ")\n";
+
+                // Show subgroups if any
+                vector<string> subgroups = get_subgroups(groupId);
+                if (!subgroups.empty()) {
+                    output << "    Subgroups:\n";
+                    for (const auto &sg : subgroups) {
+                        output << "      " << sg << "\n";
+                    }
+                }
+            }
+        }
+        output << "\nUse: cd <group_name>[/subgroup]\n";
+    } else if (cmd == "ai") {
+        string remaining;
+        getline(ss, remaining);
+        remaining = remaining.substr(remaining.find_first_not_of(" \t"));
+
+        // Remove quotes if present
+        if (!remaining.empty() && remaining.front() == '"' && remaining.back() == '"') {
+            remaining = remaining.substr(1, remaining.length() - 2);
+        }
+
+        if (remaining.empty()) {
+            output << "Usage: ai \"your natural language request\"\n"
+                   << "Example: ai \"show me meetings next week\"\n"
+                   << "Example: ai \"create a meeting tomorrow at 2pm for 1 hour\"\n";
+            return output.str();
+        }
+
+        // Process AI command
+        string result = process_ai_command(remaining, currentUsername, currentgroup);
+        return result;
     } else if (cmd == "cd") {
         string groupNameOrId;
         getline(ss, groupNameOrId);
@@ -450,13 +509,18 @@ string process_terminal_command(const string &fullLine, const string &currentUse
             return output.str();
         }
 
-        string resolved_group = groupNameOrId;
-        string resolved_name = groupNameOrId;
+        // Check if path contains a slash (indicating subgroup navigation)
+        size_t slashPos = groupNameOrId.find('/');
+        string groupPart = (slashPos != string::npos) ? groupNameOrId.substr(0, slashPos) : groupNameOrId;
+        string subgroupPath = (slashPos != string::npos) ? groupNameOrId.substr(slashPos + 1) : "";
+
+        string resolved_group = groupPart;
+        string resolved_name = groupPart;
         bool found = false;
 
         vector<json> groups = get_user_groups(currentUsername);
         for (const auto &g : groups) {
-            if (g.value("name", "") == groupNameOrId or g.value("id", "") == groupNameOrId) {
+            if (g.value("name", "") == groupPart or g.value("id", "") == groupPart) {
                 resolved_group = g.value("id", "");
                 resolved_name = g.value("name", "");
                 found = true;
@@ -465,13 +529,61 @@ string process_terminal_command(const string &fullLine, const string &currentUse
         }
 
         if (not found) {
-            output << "Error: Group '" << groupNameOrId << "' not found or you are not a member.\n";
+            output << "Error: Group '" << groupPart << "' not found or you are not a member.\n";
             return output.str();
         }
 
-        currentgroup = resolved_group;
-        output << "Changed to group: " << resolved_name << "\n";
+        // If subgroup specified, verify it exists
+        if (!subgroupPath.empty()) {
+            vector<string> availableSubgroups = get_subgroups(resolved_group);
+            bool subgroupFound = false;
+            for (const auto &sg : availableSubgroups) {
+                if (sg == subgroupPath) {
+                    subgroupFound = true;
+                    break;
+                }
+            }
+            if (!subgroupFound) {
+                output << "Error: Subgroup '" << subgroupPath << "' not found in group '" << resolved_name << "'.\n";
+                output << "Available subgroups:\n";
+                for (const auto &sg : availableSubgroups) {
+                    output << "  - " << sg << "\n";
+                }
+                return output.str();
+            }
+            // Store group with subgroup
+            currentgroup = resolved_group + "/" + subgroupPath;
+            output << "Changed to group: " << resolved_name << "/" << subgroupPath << "\n";
+        } else {
+            currentgroup = resolved_group;
+            output << "Changed to group: " << resolved_name << "\n";
+        }
         output << "RELOAD_CALENDAR\n";
+    } else if (cmd == "rm") {
+        string eventId;
+        ss >> eventId;
+
+        if (eventId.empty()) {
+            output << "Usage: rm <event_id>\n";
+            return output.str();
+        }
+
+        vector<Event> allEvents = get_all_events(currentUsername);
+        bool found = false;
+
+        for (const auto &evt : allEvents) {
+            if (evt.id == eventId) {
+                found = true;
+                delete_event(eventId, currentUsername, evt.origin);
+                output << "Event deleted: " << evt.title << " (ID: " << eventId << ")\n";
+                output << "RELOAD_CALENDAR\n";
+                break;
+            }
+        }
+
+        if (!found) {
+            output << "Error: Event with ID '" << eventId << "' not found.\n";
+        }
     } else {
         output << "Unknown command. Try 'help'.\n";
     }

@@ -4,6 +4,7 @@ groups/
 users/
 users.json
 build/
+.gemini_config
 
 compile_commands.json
 *.o

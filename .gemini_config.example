@@ -1,0 +1,5 @@
+# Gemini API Configuration
+# Get your API key from: https://makersuite.google.com/app/apikey
+# Copy this file to .gemini_config and add your key
+
+your_gemini_api_key_here

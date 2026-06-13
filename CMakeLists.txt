@@ -16,6 +16,7 @@ add_executable(calang
     src/cookies.cpp
     src/event.cpp
     src/terminal.cpp
+    src/ai_assistant.cpp
 )
 
 # target_include_directories(calang PRIVATE src)
