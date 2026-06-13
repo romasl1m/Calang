@@ -7,6 +7,7 @@
 #include "functions.h"
 #include "cookies.h"
 #include <nlohmann/json.hpp>
+#include "google_oauth.h"
 
 using namespace std;
 using json = nlohmann::json;
@@ -54,6 +55,22 @@ void api_routes(crow::SimpleApp &app) {
 
         string subgroup = urlDecode(getParam(req.body, "subgroup"));
         add_new_event(title, id, start, end, user, description, origin, recurrence, "", priority, subgroup);
+
+        // Try to create event in Google Calendar if user has access token
+        string access_token = get_user_access_token(user);
+        if (!access_token.empty()) {
+            string calendar_response = createGoogleCalendarEvent(access_token, title, start, end, description);
+            if (!calendar_response.empty()) {
+                try {
+                    json cal_json = json::parse(calendar_response);
+                    if (cal_json.contains("error")) {
+                        cerr << "Google Calendar error: " << cal_json["error"]["message"].get<string>() << endl;
+                    }
+                } catch (...) {
+                    cerr << "Failed to parse Google Calendar response" << endl;
+                }
+            }
+        }
 
         crow::response res;
         res.code = 302;

@@ -7,6 +7,7 @@
 #include <nlohmann/json.hpp>
 #include "functions.h"
 #include "ai_assistant.h"
+#include "google_oauth.h"
 
 using namespace std;
 using json = nlohmann::json;
@@ -442,6 +443,24 @@ string process_terminal_command(const string &fullLine, const string &currentUse
         string id = to_string(time(0)) + "_" + to_string(rand() % 1000);
 
         add_new_event(title, id, start, end, currentUsername, desc, resolved_origin, recurrence, "", priority, subgroup);
+
+        // Try to create event in Google Calendar if user has access token
+        string access_token = get_user_access_token(currentUsername);
+        if (!access_token.empty()) {
+            string calendar_response = createGoogleCalendarEvent(access_token, title, start, end, desc);
+            if (!calendar_response.empty()) {
+                try {
+                    json cal_json = json::parse(calendar_response);
+                    if (cal_json.contains("id")) {
+                        output << "-> Google Calendar: Event created successfully (ID: " << cal_json["id"].get<string>() << ")\n";
+                    } else if (cal_json.contains("error")) {
+                        output << "-> Google Calendar: Error - " << cal_json["error"]["message"].get<string>() << "\n";
+                    }
+                } catch (...) {
+                    output << "-> Google Calendar: Failed to parse response\n";
+                }
+            }
+        }
 
         // ... Kod outputu pozostaje bez zmian ...
         output << "An event created!\n"

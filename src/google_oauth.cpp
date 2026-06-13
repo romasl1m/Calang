@@ -125,6 +125,97 @@ string get_user_info(const string &access_token) {
     return response_string;
 }
 
+string createGoogleCalendarEvent(const string &access_token,
+                                  const string &title,
+                                  const string &start_datetime,
+                                  const string &end_datetime,
+                                  const string &description) {
+    CURL *curl;
+    CURLcode res;
+    string response_string;
+
+    curl = curl_easy_init();
+    if (!curl) {
+        return "";
+    }
+
+    // Convert datetime format from "YYYY-MM-DD HH:MM" to RFC3339 "YYYY-MM-DDTHH:MM:00Z"
+    string start_rfc3339 = start_datetime;
+    string end_rfc3339 = end_datetime;
+
+    // Replace space with 'T' and add seconds + timezone
+    if (start_rfc3339.length() >= 16) {
+        start_rfc3339[10] = 'T';
+        start_rfc3339 += ":00Z";
+    }
+    if (end_rfc3339.length() >= 16) {
+        end_rfc3339[10] = 'T';
+        end_rfc3339 += ":00Z";
+    }
+
+    // Build JSON request body
+    json event_data = {
+        {"summary", title},
+        {"description", description},
+        {"start", {{"dateTime", start_rfc3339}, {"timeZone", "UTC"}}},
+        {"end", {{"dateTime", end_rfc3339}, {"timeZone", "UTC"}}}
+    };
+
+    string post_data = event_data.dump();
+
+    // Set up headers
+    string auth_header = "Authorization: Bearer " + access_token;
+    struct curl_slist *headers = NULL;
+    headers = curl_slist_append(headers, "Content-Type: application/json");
+    headers = curl_slist_append(headers, auth_header.c_str());
+
+    // Make request to Google Calendar API v3
+    curl_easy_setopt(curl, CURLOPT_URL, "https://www.googleapis.com/calendar/v3/calendars/primary/events");
+    curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
+    curl_easy_setopt(curl, CURLOPT_POSTFIELDS, post_data.c_str());
+    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
+    curl_easy_setopt(curl, CURLOPT_WRITEDATA, &response_string);
+
+    res = curl_easy_perform(curl);
+    curl_slist_free_all(headers);
+    curl_easy_cleanup(curl);
+
+    if (res != CURLE_OK) {
+        cerr << "Calendar API error: " << curl_easy_strerror(res) << endl;
+        return "";
+    }
+
+    return response_string;
+}
+
+string get_user_access_token(const string &email) {
+    string user_dir = "users/" + email;
+    string token_file = user_dir + "/google_token.json";
+
+    if (!filesystem::exists(token_file)) {
+        return "";
+    }
+
+    ifstream fin(token_file);
+    if (!fin.is_open()) {
+        return "";
+    }
+
+    json token_data;
+    try {
+        fin >> token_data;
+        fin.close();
+
+        if (token_data.contains("access_token")) {
+            return token_data["access_token"];
+        }
+    } catch (...) {
+        return "";
+    }
+
+    return "";
+}
+
 bool create_user_if_not_exists(const string &email) {
     if (!filesystem::exists("users.json")) {
         json users = json::object();
@@ -191,7 +282,7 @@ void register_google_oauth_routes(crow::SimpleApp &app) {
                           url_encode(client_id) +
                           "&redirect_uri=" + url_encode(redirect_uri) +
                           "&response_type=code" +
-                          "&scope=" + url_encode("openid email profile") +
+                          "&scope=" + url_encode("openid email profile https://www.googleapis.com/auth/calendar") +
                           "&state=" + state;
 
         crow::response res;
@@ -299,6 +390,19 @@ void register_google_oauth_routes(crow::SimpleApp &app) {
             res.code = 500;
             return res;
         }
+
+        // Store access token for the user
+        string user_dir = "users/" + email;
+        string token_file = user_dir + "/google_token.json";
+        json token_storage = {
+            {"access_token", access_token},
+            {"refresh_token", token_data.value("refresh_token", "")},
+            {"expires_in", token_data.value("expires_in", 3600)},
+            {"timestamp", time(0)}
+        };
+        ofstream token_out(token_file);
+        token_out << token_storage.dump(4);
+        token_out.close();
 
         string session_id = generate_session_id();
         active_sessions[session_id] = email;
