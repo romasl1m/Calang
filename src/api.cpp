@@ -320,6 +320,34 @@ void api_routes(crow::SimpleApp &app) {
         return res;
     });
 
+    CROW_ROUTE(app, "/api/sync_google").methods("POST"_method)([](const crow::request &req) {
+        string cookie_header = req.get_header_value("Cookie");
+        string user = get_logged_in_user(cookie_header);
+
+        if (user.empty())
+            return crow::response(401, "Unauthorized");
+
+        int imported = syncGoogleEvents(user);
+
+        json res_json;
+        if (imported >= 0) {
+            res_json = {
+                {"success", true},
+                {"imported", imported},
+                {"message", "Successfully synced " + to_string(imported) + " events from Google Calendar"}
+            };
+        } else {
+            res_json = {
+                {"success", false},
+                {"message", "Failed to sync Google Calendar events"}
+            };
+        }
+
+        crow::response res(200, res_json.dump());
+        res.add_header("Content-Type", "application/json");
+        return res;
+    });
+
     // Przechwytujemy api_key przez referencję za pomocą [&]
     CROW_ROUTE(app, "/api/debug_models").methods("GET"_method)([&]() {
         string response_data;

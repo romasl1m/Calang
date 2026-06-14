@@ -216,6 +216,278 @@ string get_user_access_token(const string &email) {
     return "";
 }
 
+string fetchGoogleCalendarEvents(const string &access_token) {
+    CURL *curl;
+    CURLcode res;
+    string response_string;
+
+    curl = curl_easy_init();
+    if (!curl) {
+        return "";
+    }
+
+    // Fetch events from primary calendar
+    // Get events from the past month to future 6 months
+    time_t now = time(0);
+    time_t time_min = now - (30 * 24 * 60 * 60); // 30 days ago
+    time_t time_max = now + (180 * 24 * 60 * 60); // 6 months ahead
+
+    struct tm *tm_min = gmtime(&time_min);
+    struct tm *tm_max = gmtime(&time_max);
+
+    char time_min_str[64], time_max_str[64];
+    strftime(time_min_str, sizeof(time_min_str), "%Y-%m-%dT%H:%M:%SZ", tm_min);
+    strftime(time_max_str, sizeof(time_max_str), "%Y-%m-%dT%H:%M:%SZ", tm_max);
+
+    string url = "https://www.googleapis.com/calendar/v3/calendars/primary/events?";
+    url += "timeMin=" + url_encode(time_min_str);
+    url += "&timeMax=" + url_encode(time_max_str);
+    url += "&singleEvents=true";
+    url += "&orderBy=startTime";
+    url += "&maxResults=250";
+
+    string auth_header = "Authorization: Bearer " + access_token;
+    struct curl_slist *headers = NULL;
+    headers = curl_slist_append(headers, auth_header.c_str());
+
+    curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
+    curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
+    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
+    curl_easy_setopt(curl, CURLOPT_WRITEDATA, &response_string);
+
+    res = curl_easy_perform(curl);
+    curl_slist_free_all(headers);
+    curl_easy_cleanup(curl);
+
+    if (res != CURLE_OK) {
+        cerr << "Calendar fetch error: " << curl_easy_strerror(res) << endl;
+        return "";
+    }
+
+    return response_string;
+}
+
+string convertRFC3339ToLocal(const string &rfc3339_time) {
+    // Convert from "2024-06-14T10:00:00Z" or "2024-06-14T10:00:00+02:00"
+    // to "YYYY-MM-DD HH:MM" format
+    string result = rfc3339_time;
+
+    // Handle date-only events (no time component)
+    if (result.find('T') == string::npos) {
+        // Date only format: "2024-06-14" -> "2024-06-14 00:00"
+        return result + " 00:00";
+    }
+
+    // Replace 'T' with space
+    size_t t_pos = result.find('T');
+    if (t_pos != string::npos) {
+        result[t_pos] = ' ';
+    }
+
+    // Remove timezone suffix (Z or +HH:MM or -HH:MM) and seconds
+    size_t colon_count = 0;
+    size_t last_colon = string::npos;
+    for (size_t i = 0; i < result.length(); i++) {
+        if (result[i] == ':') {
+            colon_count++;
+            last_colon = i;
+        }
+    }
+
+    // Truncate after HH:MM (remove seconds and timezone)
+    if (colon_count >= 2 && last_colon != string::npos) {
+        result = result.substr(0, last_colon);
+        // Find the previous colon to keep HH:MM
+        size_t prev_colon = result.rfind(':');
+        if (prev_colon != string::npos) {
+            size_t end = prev_colon + 3; // HH:MM
+            if (end <= result.length()) {
+                result = result.substr(0, end);
+            }
+        }
+    }
+
+    // Remove any remaining non-digit/space/dash/colon characters
+    string cleaned;
+    for (char c : result) {
+        if (isdigit(c) || c == ' ' || c == '-' || c == ':') {
+            cleaned += c;
+        }
+    }
+
+    return cleaned;
+}
+
+bool eventExistsByGoogleId(const string &google_id, const string &events_file) {
+    if (!filesystem::exists(events_file)) {
+        return false;
+    }
+
+    ifstream fin(events_file);
+    if (!fin.is_open()) {
+        return false;
+    }
+
+    json events;
+    try {
+        fin >> events;
+        fin.close();
+
+        if (!events.is_array()) {
+            return false;
+        }
+
+        for (const auto &event : events) {
+            if (event.contains("google_id") && event["google_id"] == google_id) {
+                return true;
+            }
+        }
+    } catch (...) {
+        return false;
+    }
+
+    return false;
+}
+
+int syncGoogleEvents(const string &username) {
+    // Get access token
+    string access_token = get_user_access_token(username);
+    if (access_token.empty()) {
+        cerr << "No Google access token found for user: " << username << endl;
+        return -1;
+    }
+
+    // Fetch events from Google Calendar
+    string response = fetchGoogleCalendarEvents(access_token);
+    if (response.empty()) {
+        cerr << "Failed to fetch Google Calendar events" << endl;
+        return -1;
+    }
+
+    // Parse response
+    json calendar_data;
+    try {
+        calendar_data = json::parse(response);
+    } catch (const exception &e) {
+        cerr << "Failed to parse Google Calendar response: " << e.what() << endl;
+        return -1;
+    }
+
+    if (!calendar_data.contains("items")) {
+        cerr << "No items in Google Calendar response" << endl;
+        return 0;
+    }
+
+    // Load existing events
+    string events_file = "users/" + username + "/events.json";
+    json existing_events = json::array();
+
+    if (filesystem::exists(events_file)) {
+        ifstream fin(events_file);
+        if (fin.is_open()) {
+            try {
+                fin >> existing_events;
+                fin.close();
+            } catch (...) {
+                existing_events = json::array();
+            }
+        }
+    }
+
+    // Process each Google Calendar event
+    int imported_count = 0;
+    const json &items = calendar_data["items"];
+
+    for (const auto &item : items) {
+        // Skip if no ID
+        if (!item.contains("id")) {
+            continue;
+        }
+
+        string google_id = item["id"];
+
+        // Skip if already imported
+        if (eventExistsByGoogleId(google_id, events_file)) {
+            continue;
+        }
+
+        // Extract event details
+        string title = item.value("summary", "Untitled Event");
+        string description = item.value("description", "");
+
+        // Get start and end times
+        string start_time, end_time;
+
+        if (item.contains("start")) {
+            if (item["start"].contains("dateTime")) {
+                start_time = convertRFC3339ToLocal(item["start"]["dateTime"]);
+            } else if (item["start"].contains("date")) {
+                start_time = convertRFC3339ToLocal(item["start"]["date"]);
+            }
+        }
+
+        if (item.contains("end")) {
+            if (item["end"].contains("dateTime")) {
+                end_time = convertRFC3339ToLocal(item["end"]["dateTime"]);
+            } else if (item["end"].contains("date")) {
+                // All-day events: end date is exclusive, so subtract one day
+                string date_str = item["end"]["date"];
+                end_time = convertRFC3339ToLocal(date_str);
+                // For all-day events, set end time to 23:59
+                size_t space_pos = end_time.find(' ');
+                if (space_pos != string::npos) {
+                    end_time = end_time.substr(0, space_pos) + " 23:59";
+                }
+            }
+        }
+
+        // Skip if we couldn't get valid times
+        if (start_time.empty() || end_time.empty()) {
+            continue;
+        }
+
+        // Generate unique event ID
+        static int event_counter = 0;
+        string event_id = "gcal_" + to_string(time(0)) + "_" + to_string(event_counter++);
+
+        // Create event JSON
+        json new_event = {
+            {"id", event_id},
+            {"title", title},
+            {"start", start_time},
+            {"end", end_time},
+            {"user", username},
+            {"description", description},
+            {"origin", "private"},
+            {"recurrence", "none"},
+            {"recurrence_id", ""},
+            {"priority", "medium"},
+            {"subgroup", ""},
+            {"google_id", google_id}
+        };
+
+        existing_events.push_back(new_event);
+        imported_count++;
+    }
+
+    // Save updated events
+    if (imported_count > 0) {
+        ofstream fout(events_file);
+        if (fout.is_open()) {
+            fout << existing_events.dump(4);
+            fout.close();
+            cout << "Successfully imported " << imported_count << " events from Google Calendar" << endl;
+        } else {
+            cerr << "Failed to save events to file" << endl;
+            return -1;
+        }
+    } else {
+        cout << "No new events to import from Google Calendar" << endl;
+    }
+
+    return imported_count;
+}
+
 bool create_user_if_not_exists(const string &email) {
     if (!filesystem::exists("users.json")) {
         json users = json::object();
@@ -384,6 +656,7 @@ void register_google_oauth_routes(crow::SimpleApp &app) {
         }
 
         string email = user_info["email"];
+        string user_name = user_info.value("name", email);
 
         if (!create_user_if_not_exists(email)) {
             crow::response res("Authentication failed: Could not create user account");
@@ -391,14 +664,16 @@ void register_google_oauth_routes(crow::SimpleApp &app) {
             return res;
         }
 
-        // Store access token for the user
+        // Store access token and user info
         string user_dir = "users/" + email;
         string token_file = user_dir + "/google_token.json";
         json token_storage = {
             {"access_token", access_token},
             {"refresh_token", token_data.value("refresh_token", "")},
             {"expires_in", token_data.value("expires_in", 3600)},
-            {"timestamp", time(0)}
+            {"timestamp", time(0)},
+            {"user_name", user_name},
+            {"user_email", email}
         };
         ofstream token_out(token_file);
         token_out << token_storage.dump(4);

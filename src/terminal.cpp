@@ -119,6 +119,15 @@ string process_terminal_command(const string &fullLine, const string &currentUse
         }
     } else if (cmd == "whoami") {
         output << currentUsername << "\n";
+    } else if (cmd == "sync") {
+        output << "Syncing events from Google Calendar...\n";
+        int imported = syncGoogleEvents(currentUsername);
+        if (imported >= 0) {
+            output << "Successfully imported " << imported << " events from Google Calendar\n";
+            output << "RELOAD_CALENDAR\n";
+        } else {
+            output << "Failed to sync Google Calendar. Make sure you're logged in with Google.\n";
+        }
     } else if (cmd == "help") {
         output << "Available commands:\n"
                << "  cat {YYYY-MM-DD} - show events for a specific date\n"
@@ -132,6 +141,7 @@ string process_terminal_command(const string &fullLine, const string &currentUse
                << "  clear\n"
                << "  whoami\n"
                << "  dates - show stored dates from recent searches\n"
+               << "  sync - import events from Google Calendar\n"
                << "  ai \"natural language request\" - use AI to execute commands\n"
                << "  rm <event_id> - delete an event\n"
                << "  $DATE or $DATE[n] - use stored dates in commands (0=first)\n";
