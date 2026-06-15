@@ -152,10 +152,21 @@ void api_routes(crow::SimpleApp &app) {
         if (user.empty())
             return crow::response(401, "Unauthorized");
 
+        if (name.empty())
+            return crow::response(400, json({{"error", "Group name cannot be empty"}}).dump());
+
         string generated_id;
         create_group(name, user, generated_id);
 
-        return crow::response(200, "Group created");
+        json response = {
+            {"success", true},
+            {"group_id", generated_id},
+            {"message", "Group created successfully"}
+        };
+
+        crow::response res(200, response.dump());
+        res.add_header("Content-Type", "application/json");
+        return res;
     });
 
     CROW_ROUTE(app, "/api/join_group").methods("POST"_method)([](const crow::request &req) {
@@ -188,6 +199,53 @@ void api_routes(crow::SimpleApp &app) {
         fout.close();
 
         return crow::response(200, "Joined successfully");
+    });
+
+    CROW_ROUTE(app, "/api/delete_group").methods("POST"_method)([](const crow::request &req) {
+        string group_id = urlDecode(getParam(req.body, "group_id"));
+        string cookie_header = req.get_header_value("Cookie");
+        string user = get_logged_in_user(cookie_header);
+
+        if (user.empty())
+            return crow::response(401, "Unauthorized");
+
+        if (group_id.empty())
+            return crow::response(400, "Group ID is required");
+
+        // Check if user is the creator (first member)
+        string members_path = "groups/" + group_id + "/members.json";
+        if (!filesystem::exists(members_path)) {
+            return crow::response(404, "Group not found");
+        }
+
+        ifstream fin(members_path);
+        json members;
+        fin >> members;
+        fin.close();
+
+        if (!members.is_array() || members.empty()) {
+            return crow::response(404, "Group not found");
+        }
+
+        string creator = members[0].get<string>();
+        if (creator != user) {
+            return crow::response(403, json({{"error", "Only the group creator can delete the group"}}).dump());
+        }
+
+        // Delete the entire group directory
+        string group_path = "groups/" + group_id;
+        try {
+            filesystem::remove_all(group_path);
+            json response = {
+                {"success", true},
+                {"message", "Group deleted successfully"}
+            };
+            crow::response res(200, response.dump());
+            res.add_header("Content-Type", "application/json");
+            return res;
+        } catch (const exception &e) {
+            return crow::response(500, json({{"error", "Failed to delete group"}}).dump());
+        }
     });
 
     CROW_ROUTE(app, "/api/add_subgroup").methods("POST"_method)([](const crow::request &req) {

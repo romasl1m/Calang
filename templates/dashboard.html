@@ -212,6 +212,61 @@
         .group-empty::before { display: none !important; }
         .group-empty::after  { display: none !important; }
 
+        /* Subgroup tree styles */
+        .group-item { position: relative; }
+        .group-expand {
+            position: absolute;
+            right: 4px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 16px;
+            height: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            color: var(--text-dim);
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        .group-expand:hover { color: var(--accent); }
+        .group-expand.expanded { transform: translateY(-50%) rotate(90deg); }
+        .subgroups-list {
+            display: none;
+            flex-direction: column;
+            gap: 2px;
+            margin-top: 2px;
+        }
+        .subgroups-list.open { display: flex; }
+        .subgroup-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 7px 10px 7px 24px;
+            border-radius: 6px;
+            font-size: 12.5px;
+            font-weight: 500;
+            cursor: pointer;
+            color: var(--text-mid);
+            transition: background 0.13s, color 0.13s;
+            user-select: none;
+            margin-top: 2px;
+        }
+        .subgroup-item.active {
+            background: var(--accent-dim);
+            color: var(--accent);
+        }
+        .subgroup-item:hover { background: rgba(255,255,255,0.04); color: var(--text); }
+        .subgroup-item::before {
+            content: '';
+            width: 5px; height: 5px;
+            border-radius: 50%;
+            background: var(--success);
+            opacity: 0.6;
+            flex-shrink: 0;
+        }
+        .subgroup-item.active::before { background: var(--accent); opacity: 1; }
+
 
         /* ═══════════ GROUP INFO PANEL ═══════════ */
         .group-info-panel {
@@ -804,6 +859,60 @@
             font-family: 'JetBrains Mono', monospace;
             color: var(--text-dim);
             font-weight: 500;
+        }
+
+        
+        body.is-month-view .time-ruler { display: none; }
+        body.is-month-view .allday-strip { display: none; }
+        body.is-month-view .days-grid {
+            grid-template-columns: repeat(7, 1fr);
+            grid-auto-rows: minmax(100px, 1fr);
+            gap: 1px;
+            background: var(--border);
+        }
+        body.is-month-view .month-day {
+            background: var(--bg-card);
+            padding: 5px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            overflow: hidden;
+        }
+        body.is-month-view .month-day.other-month {
+            background: rgba(255,255,255,0.02);
+        }
+        body.is-month-view .month-event {
+            background: rgba(139, 92, 246, 0.12);
+            border-left: 2px solid var(--purple-primary);
+            padding: 2px 4px;
+            font-size: 11px;
+            border-radius: 3px;
+            color: var(--text);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            cursor: pointer;
+            margin-bottom: 2px;
+        }
+        body.is-month-view .month-day-header {
+            text-align: right;
+            font-size: 12px;
+            color: var(--text-mid);
+            padding: 2px;
+        }
+        body.is-month-view .month-day-header.today {
+            color: var(--accent);
+            font-weight: bold;
+        }
+
+        body.is-day-view .days-grid {
+            grid-template-columns: 1fr;
+        }
+        body.is-day-view .cal-header-days {
+            grid-template-columns: 1fr;
+        }
+        body.is-day-view .allday-cells {
+            grid-template-columns: 1fr;
         }
 
         .days-grid {
@@ -1872,6 +1981,7 @@
             <button class="tb-btn" onclick="openNewModal()">+ New event</button>
             <button class="tb-btn term" onclick="toggleTerminal()">_ terminal</button>
             <button class="tb-btn term mobile-term-btn" onclick="toggleTerminal()" style="display:none;">⌘</button>
+            <button class="tb-btn" onclick="syncGoogleCalendar()" title="Sync with Google Calendar" style="background: transparent; border-color: var(--success); color: var(--success);">Sync</button>
             <span class="week-badge" id="subgroupFilter" style="display:none; background: linear-gradient(135deg, var(--purple-primary), var(--blue-primary)); color: white; cursor: pointer;" onclick="clearSubgroupFilter()">📁 Loading... ✕</span>
             <span class="week-badge" id="weekBadge">W--</span>
         </div>
@@ -1882,7 +1992,12 @@
                 <!-- Calendar navigation -->
                 <div class="cal-nav">
                     <button class="cal-nav-btn" onclick="changeWeek('{{prev_week}}')">&larr; prev</button>
-                    <span class="cal-nav-title">{{week_range}}</span>
+                    <div style="display: flex; gap: 4px; align-items: center;">
+                        <button class="cal-nav-btn" onclick="changeView('day')" title="Day view">D</button>
+                        <button class="cal-nav-btn" onclick="changeView('week')" title="Week view" style="background: rgba(139, 92, 246, 0.1); color: var(--purple-primary);">W</button>
+                        <button class="cal-nav-btn" onclick="changeView('month')" title="Month view">M</button>
+                        <span class="cal-nav-title" style="margin-left: 8px;">{{week_range}}</span>
+                    </div>
                     <button class="cal-nav-btn" onclick="changeWeek('{{next_week}}')">next &rarr;</button>
                 </div>
 
@@ -1930,6 +2045,9 @@
                     <code id="gi-group-id">—</code>
                     <button class="gi-copy-btn" onclick="copyGroupId()">Copy ID</button>
                 </div>
+            </div>
+            <div class="gi-section" id="gi-delete-section" style="display:none;">
+                <button class="gi-copy-btn" onclick="deleteCurrentGroup()" style="background: linear-gradient(135deg, var(--danger), #dc2626); width: 100%;">Delete Group</button>
             </div>
             <div class="gi-section">
                 <div class="gi-stat-grid">
@@ -2238,9 +2356,33 @@ function layoutEvents() {
     const columns = document.querySelectorAll('.day-column');
     const nameGrid  = document.getElementById('dayNamesGrid');
     const adCells   = document.getElementById('alldayCells');
+    const calendarView = new URLSearchParams(window.location.search).get('calendar_view') || 'week';
 
     nameGrid.innerHTML = '';
     adCells.innerHTML  = '';
+
+    if (calendarView === 'month') {
+        document.body.classList.add('is-month-view');
+        nameGrid.style.gridTemplateColumns = 'repeat(7, 1fr)';
+        DAYS.forEach(day => {
+            const nameCell = document.createElement('div');
+            nameCell.className = 'day-name-cell';
+            nameCell.innerHTML = `<span>${day}</span>`;
+            nameGrid.appendChild(nameCell);
+        });
+        return;
+    } else if (calendarView === 'day') {
+        document.body.classList.add('is-day-view');
+        document.getElementById('daysGrid').style.gridTemplateColumns = '1fr';
+        nameGrid.style.gridTemplateColumns = '1fr';
+        adCells.style.gridTemplateColumns = '1fr';
+    } else {
+        document.body.classList.remove('is-month-view');
+        document.body.classList.remove('is-day-view');
+        document.getElementById('daysGrid').style.gridTemplateColumns = 'repeat(7, 1fr)';
+        nameGrid.style.gridTemplateColumns = 'repeat(7, 1fr)';
+        adCells.style.gridTemplateColumns = 'repeat(7, 1fr)';
+    }
 
     // Today's date string for highlighting
     const now = new Date();
@@ -2268,7 +2410,12 @@ function layoutEvents() {
             dayNum = p[2] + '.' + p[1];
         }
         if (dayDate === todayStr) nameCell.classList.add('today');
-        nameCell.innerHTML = `<span>${DAYS[idx]||''}</span><span class="day-num">${escHtml(dayNum)}</span>`;
+        let dayNameIdx = idx;
+        if (calendarView === 'day' && dayDate) {
+            const d = new Date(dayDate);
+            dayNameIdx = d.getDay() === 0 ? 6 : d.getDay() - 1;
+        }
+        nameCell.innerHTML = `<span>${DAYS[dayNameIdx]||''}</span><span class="day-num">${escHtml(dayNum)}</span>`;
         nameGrid.appendChild(nameCell);
 
         /* ── All-day cell placeholder ── */
@@ -2404,6 +2551,14 @@ function changeWeek(dateVal) {
     window.location.search = p.toString();
 }
 
+function changeView(viewType) {
+    const p = new URLSearchParams(window.location.search);
+    p.set('calendar_view', viewType);
+    localStorage.setItem('calendar_view', viewType);
+
+    window.location.search = p.toString();
+}
+
 function switchView(name) {
     const p = new URLSearchParams(window.location.search);
     p.set('view', name);
@@ -2431,22 +2586,27 @@ function loadGroups() {
         cachedGroups = groups;
         const list = document.getElementById('groups-list');
         const sel  = document.getElementById('n_origin');
-        const view = new URLSearchParams(window.location.search).get('view') || 'all';
+        const params = new URLSearchParams(window.location.search);
+        const view = params.get('view') || 'all';
+        const activeSubgroup = params.get('subgroup');
 
         document.getElementById('view-all').classList.toggle('active', view === 'all');
         document.getElementById('view-private').classList.toggle('active', view === 'private');
 
         if (sel) sel.innerHTML = '<option value="private">Private</option>';
 
-        // Populate simple group list
+        // Populate group list with subgroups
         if (!groups.length) {
             list.innerHTML = '<li class="group-empty">No groups yet</li>';
         } else {
             list.innerHTML = '';
             groups.forEach(g => {
+                const container = document.createElement('div');
+                container.className = 'group-item';
+
                 const li = document.createElement('li');
                 li.textContent = g.name;
-                li.classList.toggle('active', view === g.id);
+                li.classList.toggle('active', view === g.id && !activeSubgroup);
                 li.onclick = () => switchView(g.id);
 
                 // Right-click to view info
@@ -2454,7 +2614,74 @@ function loadGroups() {
                     e.preventDefault();
                     openGroupInfo(g.id);
                 };
-                list.appendChild(li);
+
+                // Check if group has subgroups
+                const hasSubgroups = g.subgroups && (
+                    (Array.isArray(g.subgroups) && g.subgroups.length > 0) ||
+                    (typeof g.subgroups === 'object' && Object.keys(g.subgroups).length > 0)
+                );
+
+                if (hasSubgroups) {
+                    const expandBtn = document.createElement('span');
+                    expandBtn.className = 'group-expand';
+                    expandBtn.innerHTML = '▸';
+                    expandBtn.onclick = (e) => {
+                        e.stopPropagation();
+                        expandBtn.classList.toggle('expanded');
+                        const subgroupsList = container.querySelector('.subgroups-list');
+                        if (subgroupsList) {
+                            subgroupsList.classList.toggle('open');
+                        }
+                    };
+                    li.appendChild(expandBtn);
+
+                    // Create subgroups list
+                    const subgroupsList = document.createElement('div');
+                    subgroupsList.className = 'subgroups-list';
+
+                    // Flatten subgroups
+                    const flatSubgroups = [];
+                    function flattenSubs(node, prefix = '') {
+                        if (Array.isArray(node)) {
+                            node.forEach(sg => flatSubgroups.push(prefix ? `${prefix}/${sg}` : sg));
+                        } else if (typeof node === 'object') {
+                            Object.keys(node).forEach(key => {
+                                const path = prefix ? `${prefix}/${key}` : key;
+                                flatSubgroups.push(path);
+                                if (node[key] && typeof node[key] === 'object') {
+                                    flattenSubs(node[key], path);
+                                }
+                            });
+                        }
+                    }
+                    flattenSubs(g.subgroups);
+
+                    flatSubgroups.forEach(sg => {
+                        const sgItem = document.createElement('div');
+                        sgItem.className = 'subgroup-item';
+                        sgItem.textContent = sg.split('/').pop();
+                        sgItem.title = sg;
+                        if (view === g.id && activeSubgroup === sg) {
+                            sgItem.classList.add('active');
+                        }
+                        sgItem.onclick = (e) => {
+                            e.stopPropagation();
+                            filterEventsBySubgroup(g.id, sg);
+                        };
+                        subgroupsList.appendChild(sgItem);
+                    });
+
+                    if (view === g.id) {
+                        subgroupsList.classList.add('open');
+                        expandBtn.classList.add('expanded');
+                    }
+
+                    container.appendChild(li);
+                    container.appendChild(subgroupsList);
+                    list.appendChild(container);
+                } else {
+                    list.appendChild(li);
+                }
 
                 // Populate origin select
                 if (sel) {
@@ -2502,12 +2729,17 @@ function createGroupWithName(name) {
     fetch('/api/create_group', {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: 'group_name=' + encodeURIComponent(name)
+        body: 'name=' + encodeURIComponent(name)
     })
     .then(r => r.json())
-    .then(() => {
-        loadGroups();
-        alert('Group created! ID copied to clipboard.');
+    .then(data => {
+        if (data.success && data.group_id) {
+            navigator.clipboard.writeText(data.group_id).catch(() => {});
+            loadGroups();
+            alert('Group "' + name + '" created!\nGroup ID: ' + data.group_id + '\n(Copied to clipboard)');
+        } else {
+            alert(data.error || 'Failed to create group');
+        }
     })
     .catch(() => alert('Failed to create group'));
 }
@@ -2559,6 +2791,17 @@ function openGroupInfo(groupId) {
         const creator = data.creator || '—';
         document.getElementById('gi-creator').querySelector('.gi-member-name').textContent = creator;
         document.getElementById('gi-creator').querySelector('.gi-member-avatar').textContent = creator.charAt(0).toUpperCase();
+
+        // Show delete button only if current user is the creator
+        // Get current user from page
+        const userGreet = document.querySelector('.user-greet strong');
+        const currentUser = userGreet ? userGreet.textContent : '';
+        const deleteSection = document.getElementById('gi-delete-section');
+        if (currentUser === creator) {
+            deleteSection.style.display = 'block';
+        } else {
+            deleteSection.style.display = 'none';
+        }
 
         // Display subgroups
         displaySubgroupsInPanel(data.subgroups || {});
@@ -2638,8 +2881,41 @@ function copyGroupId() {
     navigator.clipboard.writeText(id).then(() => {
         const btn = document.querySelector('.gi-copy-btn');
         btn.textContent = 'Copied!';
-        setTimeout(() => { btn.textContent = 'Copy'; }, 1500);
+        setTimeout(() => { btn.textContent = 'Copy ID'; }, 1500);
     });
+}
+
+function deleteCurrentGroup() {
+    if (!currentOpenGroupId) return;
+
+    const groupName = document.getElementById('gi-name').textContent;
+    if (!confirm(`Are you sure you want to delete the group "${groupName}"?\n\nThis will permanently delete:\n- All group events\n- All subgroups\n- All member associations\n\nThis action cannot be undone!`)) {
+        return;
+    }
+
+    fetch('/api/delete_group', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: 'group_id=' + encodeURIComponent(currentOpenGroupId)
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            alert('Group deleted successfully');
+            closeGroupInfo();
+            // Redirect to "all" view if we were viewing this group
+            const params = new URLSearchParams(window.location.search);
+            if (params.get('view') === currentOpenGroupId) {
+                params.set('view', 'all');
+                window.location.search = params.toString();
+            } else {
+                location.reload();
+            }
+        } else {
+            alert(data.error || 'Failed to delete group. You must be the group creator.');
+        }
+    })
+    .catch(() => alert('Failed to delete group'));
 }
 
 function toggleGroupsSection(event) {
@@ -3232,6 +3508,35 @@ function runAICommand() {
     .catch(() => printTerminal('Error executing command', false));
 }
 
+/* ═══ Google Calendar Sync ═══ */
+function syncGoogleCalendar() {
+    const btn = event.target;
+    const originalText = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '⏳ Syncing...';
+
+    fetch('/api/sync_google', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            alert(data.message || 'Successfully synced with Google Calendar!');
+            location.reload();
+        } else {
+            alert(data.message || 'Failed to sync. Make sure you\'re logged in with Google.');
+        }
+    })
+    .catch(() => {
+        alert('Failed to connect to sync service.');
+    })
+    .finally(() => {
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+    });
+}
+
 /* ═══ Mobile sidebar toggle ═══ */
 function toggleMobileSidebar() {
     const sidebar = document.getElementById('sidebar');
@@ -3362,6 +3667,26 @@ function setupMobileGestures() {
     });
 }
 
+/* ═══ Update view buttons ═══ */
+function updateViewButtons() {
+    const params = new URLSearchParams(window.location.search);
+    const currentView = params.get('calendar_view') || localStorage.getItem('calendar_view') || 'week';
+
+    // Style all view buttons
+    document.querySelectorAll('.cal-nav button').forEach(btn => {
+        const btnText = btn.textContent.trim();
+        if ((btnText === 'D' && currentView === 'day') ||
+            (btnText === 'W' && currentView === 'week') ||
+            (btnText === 'M' && currentView === 'month')) {
+            btn.style.background = 'rgba(139, 92, 246, 0.1)';
+            btn.style.color = 'var(--purple-primary)';
+        } else if (btnText === 'D' || btnText === 'W' || btnText === 'M') {
+            btn.style.background = 'transparent';
+            btn.style.color = 'var(--text-mid)';
+        }
+    });
+}
+
 /* ═══ Init ═══ */
 window.addEventListener('DOMContentLoaded', () => {
     // Initialize terminal prompt from cookie
@@ -3421,6 +3746,7 @@ window.addEventListener('DOMContentLoaded', () => {
     layoutEvents();
     updateWeekNumber();
     updateSubgroupFilterBadge();
+    updateViewButtons();
     loadGroups();
     drawNowLine();
     setInterval(drawNowLine, 60000); // refresh every minute

@@ -97,6 +97,7 @@ void dashboard(crow::SimpleApp &app) {
 
         // POPRAWKA: Pobieranie widoku przeniesione NA SAMĄ GÓRĘ, przed generowanie HTML kalendarza
         string view = req.url_params.get("view") != nullptr ? req.url_params.get("view") : "all";
+        string calendar_view = req.url_params.get("calendar_view") != nullptr ? req.url_params.get("calendar_view") : "week";
         replace_tag("{{current_view}}", view);
 
         // Get subgroup filter if any
@@ -126,49 +127,97 @@ void dashboard(crow::SimpleApp &app) {
         string events_html;
         string days[] = {"Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"};
 
-        for (int i = 0; i < 7; i++) {
-            time_t current_day_time = monday_time + (i * 24 * 3600);
-            tm current_day_tm = *localtime(&current_day_time);
-            strftime(buf, sizeof(buf), "%Y-%m-%d", &current_day_tm);
-            string current_day_str = buf;
-            strftime(buf, sizeof(buf), "%d.%m", &current_day_tm);
-            string day_label = buf;
-
-            events_html += "<div class='day-column' data-day='" + current_day_str + "'>";
-            events_html += "  <div class='day-header'>" + days[i] + "<br><small>" + day_label + "</small></div>";
-
-            for (const auto &e : events) {
-                string dec_start = urlDecode(e.start);
-                string dec_end = urlDecode(e.end);
-                string dec_title = urlDecode(e.title);
-                string dec_desc = urlDecode(e.description);
-
-                if (dec_start.size() >= 10 and dec_start.substr(0, 10) == current_day_str) {
-                    string start_time = "00:00";
-                    string end_time = "23:59";
-
-                    if (dec_start.size() >= 16)
-                        start_time = dec_start.substr(11, 5);
-                    if (dec_end.size() >= 16)
-                        end_time = dec_end.substr(11, 5);
-
-                    events_html += "<div class=\"event-card\" ";
-                    events_html += "data-id=\"" + e.id + "\" ";
-                    events_html += "data-title=\"" + dec_title + "\" ";
-                    events_html += "data-user=\"" + e.user + "\" ";
-                    events_html += "data-description=\"" + dec_desc + "\" ";
-                    events_html += "data-start=\"" + start_time + "\" ";
-                    events_html += "data-end=\"" + end_time + "\" ";
-                    events_html += "data-origin=\"" + e.origin + "\" ";
-                    events_html += "data-recurrence=\"" + e.recurrence + "\" ";
-                    events_html += "data-priority=\"" + e.priority + "\" ";
-                    events_html += "data-subgroup=\"" + e.subgroup + "\">";
-                    events_html += "  <span class='time'>" + start_time + " - " + end_time + "</span>";
-                    events_html += "  <span class='title'>" + dec_title + "</span>";
-                    events_html += "</div>";
+        if (calendar_view == "month") {
+            tm first_day_tm = *ltm;
+            first_day_tm.tm_mday = 1;
+            first_day_tm.tm_hour = 12;
+            first_day_tm.tm_min = 0;
+            first_day_tm.tm_sec = 0;
+            time_t first_day_time = mktime(&first_day_tm);
+            tm *fd_tm = localtime(&first_day_time);
+            int fd_wday = (fd_tm->tm_wday == 0) ? 6 : (fd_tm->tm_wday - 1);
+            
+            time_t start_cal_time = first_day_time - (fd_wday * 24 * 3600);
+            
+            for (int i = 0; i < 42; i++) {
+                time_t current_day_time = start_cal_time + (i * 24 * 3600);
+                tm current_day_tm = *localtime(&current_day_time);
+                strftime(buf, sizeof(buf), "%Y-%m-%d", &current_day_tm);
+                string current_day_str = buf;
+                
+                string extra_class = (current_day_tm.tm_mon == fd_tm->tm_mon) ? "" : " other-month";
+                
+                time_t curr_now = time(0);
+                tm *curr_now_tm = localtime(&curr_now);
+                char buf_today[64];
+                strftime(buf_today, sizeof(buf_today), "%Y-%m-%d", curr_now_tm);
+                if (current_day_str == string(buf_today)) extra_class += " today";
+                
+                events_html += "<div class='month-day" + extra_class + "' data-day='" + current_day_str + "'>";
+                events_html += string("<div class='month-day-header") + (string(current_day_str) == string(buf_today) ? " today" : "") + "'>" + to_string(current_day_tm.tm_mday) + "</div>";
+                
+                for (const auto &e : events) {
+                     string dec_start = urlDecode(e.start);
+                     if (dec_start.size() >= 10 and dec_start.substr(0, 10) == current_day_str) {
+                         string dec_title = urlDecode(e.title);
+                         events_html += "<div class='month-event' title='" + dec_title + "'>" + dec_title + "</div>";
+                     }
                 }
+                events_html += "</div>";
             }
-            events_html += "</div>";
+        } else {
+            int start_i = 0;
+            int num_days = 7;
+            if (calendar_view == "day") {
+                int day_of_week = ltm->tm_wday;
+                start_i = (day_of_week == 0) ? 6 : (day_of_week - 1);
+                num_days = start_i + 1;
+            }
+
+            for (int i = start_i; i < num_days; i++) {
+                time_t current_day_time = monday_time + (i * 24 * 3600);
+                tm current_day_tm = *localtime(&current_day_time);
+                strftime(buf, sizeof(buf), "%Y-%m-%d", &current_day_tm);
+                string current_day_str = buf;
+                strftime(buf, sizeof(buf), "%d.%m", &current_day_tm);
+                string day_label = buf;
+
+                events_html += "<div class='day-column' data-day='" + current_day_str + "'>";
+                events_html += "  <div class='day-header'>" + days[i] + "<br><small>" + day_label + "</small></div>";
+
+                for (const auto &e : events) {
+                    string dec_start = urlDecode(e.start);
+                    string dec_end = urlDecode(e.end);
+                    string dec_title = urlDecode(e.title);
+                    string dec_desc = urlDecode(e.description);
+
+                    if (dec_start.size() >= 10 and dec_start.substr(0, 10) == current_day_str) {
+                        string start_time = "00:00";
+                        string end_time = "23:59";
+
+                        if (dec_start.size() >= 16)
+                            start_time = dec_start.substr(11, 5);
+                        if (dec_end.size() >= 16)
+                            end_time = dec_end.substr(11, 5);
+
+                        events_html += "<div class=\"event-card\" ";
+                        events_html += "data-id=\"" + e.id + "\" ";
+                        events_html += "data-title=\"" + dec_title + "\" ";
+                        events_html += "data-user=\"" + e.user + "\" ";
+                        events_html += "data-description=\"" + dec_desc + "\" ";
+                        events_html += "data-start=\"" + start_time + "\" ";
+                        events_html += "data-end=\"" + end_time + "\" ";
+                        events_html += "data-origin=\"" + e.origin + "\" ";
+                        events_html += "data-recurrence=\"" + e.recurrence + "\" ";
+                        events_html += "data-priority=\"" + e.priority + "\" ";
+                        events_html += "data-subgroup=\"" + e.subgroup + "\">";
+                        events_html += "  <span class='time'>" + start_time + " - " + end_time + "</span>";
+                        events_html += "  <span class='title'>" + dec_title + "</span>";
+                        events_html += "</div>";
+                    }
+                }
+                events_html += "</div>";
+            }
         }
         replace_tag("{{calendar_content}}", events_html);
 
