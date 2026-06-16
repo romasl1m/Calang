@@ -491,7 +491,30 @@
             border: 1px solid var(--border);
             border-radius: 8px;
             overflow: hidden;
-            height: 280px;
+            height: 340px;
+        }
+        .ai-quick-actions {
+            display: flex;
+            gap: 4px;
+            padding: 6px;
+            border-bottom: 1px solid var(--border);
+            background: rgba(0,0,0,0.15);
+            flex-wrap: wrap;
+        }
+        .ai-quick-btn {
+            background: rgba(139, 92, 246, 0.1);
+            border: 1px solid rgba(139, 92, 246, 0.3);
+            color: var(--purple-light);
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 10px;
+            cursor: pointer;
+            transition: all 0.15s;
+            white-space: nowrap;
+        }
+        .ai-quick-btn:hover {
+            background: rgba(139, 92, 246, 0.2);
+            border-color: var(--purple-primary);
         }
         .ai-chat-messages {
             flex: 1;
@@ -523,6 +546,38 @@
             color: var(--text);
             align-self: flex-start;
             border-bottom-left-radius: 2px;
+        }
+        .ai-msg.command {
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            color: var(--success);
+            align-self: flex-start;
+            font-family: 'JetBrains Mono', monospace;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            max-width: 100%;
+        }
+        .ai-cmd-text {
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .ai-run-btn {
+            background: var(--success);
+            border: none;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 10px;
+            cursor: pointer;
+            transition: all 0.15s;
+            flex-shrink: 0;
+        }
+        .ai-run-btn:hover {
+            background: #14b8a6;
+            transform: translateY(-1px);
         }
         .ai-msg.system {
             background: rgba(255,255,255,0.02);
@@ -1148,6 +1203,10 @@
             max-width: 430px;
             overflow: hidden;
             box-shadow: 0 24px 64px rgba(0,0,0,0.6), 0 0 40px rgba(139, 92, 246, 0.1);
+            position: relative;
+        }
+        .modal-box.draggable {
+            cursor: move;
         }
         .modal-head {
             padding: 14px 18px;
@@ -1156,6 +1215,22 @@
             color: var(--text);
             border-bottom: 1px solid var(--border);
             letter-spacing: 0.01em;
+            cursor: move;
+            user-select: none;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .modal-drag-handle {
+            display: inline-flex;
+            gap: 2px;
+            opacity: 0.5;
+        }
+        .modal-drag-handle span {
+            width: 3px;
+            height: 3px;
+            background: var(--text-mid);
+            border-radius: 50%;
         }
         .modal-body {
             padding: 18px;
@@ -1944,6 +2019,12 @@
             <div class="sb-form-block">
                 <label>AI Assistant</label>
                 <div class="ai-chat-container">
+                    <div class="ai-quick-actions">
+                        <button class="ai-quick-btn" onclick="aiQuickAction('Show next 7 events')">📅 Next 7</button>
+                        <button class="ai-quick-btn" onclick="aiQuickAction('Show today events')">📆 Today</button>
+                        <button class="ai-quick-btn" onclick="aiQuickAction('Search for meetings')">🔍 Find</button>
+                        <button class="ai-quick-btn" onclick="aiQuickAction('Create event tomorrow at 2pm')">➕ Add</button>
+                    </div>
                     <div class="ai-chat-messages" id="ai-chat-messages">
                         <!-- Messages will be added here by JavaScript -->
                     </div>
@@ -1971,10 +2052,13 @@
 
         <header class="topbar">
             <div class="tb-left">
-                <img class="avatar" src="/static/profile.jpg" onerror="this.style.display='none'">
-                <div class="user-greet">Welcome, <strong>{{username}}</strong></div>
+                <img class="avatar" src="{{profile_picture}}" onerror="this.style.display='none'">
+                <div class="user-greet">Welcome, <strong>{{name}}</strong></div>
             </div>
-            <button class="logout-btn" onclick="location.href='/logout'">Logout</button>
+            <div class="tb-right" style="display: flex; gap: 10px;">
+                <button class="logout-btn" style="border-color: var(--blue-primary); color: var(--blue-primary);" onclick="location.href='/profile'">Profile</button>
+                <button class="logout-btn" onclick="location.href='/logout'">Logout</button>
+            </div>
         </header>
 
         <div class="toolbar">
@@ -2107,8 +2191,14 @@
 
 <!-- ═══════════════════════ NEW EVENT MODAL ═══════════════════════ -->
 <div id="newModal" class="modal-overlay">
-    <div class="modal-box">
-        <div class="modal-head">New event</div>
+    <div class="modal-box" id="newModalBox">
+        <div class="modal-head" id="newModalHead">
+            <span>New event</span>
+            <span class="modal-drag-handle">
+                <span></span><span></span><span></span>
+                <span></span><span></span><span></span>
+            </span>
+        </div>
         <form id="newEventForm" action="/api/new_event" method="POST" onsubmit="prepareNewEventSubmit()">
             <input type="hidden" name="start" id="n_start_hidden">
             <input type="hidden" name="end"   id="n_end_hidden">
@@ -3169,9 +3259,19 @@ function openNewModal() {
     if (nStartPicker) nStartPicker.setDate("12:00");
     if (nEndPicker) nEndPicker.setDate("13:00");
 
+    // Reset modal position
+    const box = document.getElementById('newModalBox');
+    box.style.position = 'relative';
+    box.style.left = '';
+    box.style.top = '';
+    box.style.transform = '';
+    box.style.margin = '';
+
     document.getElementById('newModal').classList.add('open');
 }
-function closeNewModal() { document.getElementById('newModal').classList.remove('open'); }
+function closeNewModal() {
+    document.getElementById('newModal').classList.remove('open');
+}
 
 function prepareNewEventSubmit() {
     const date   = document.getElementById('n_date').value;
@@ -3399,17 +3499,58 @@ function printTerminal(text, isCmd) {
 /* ═══ AI Chat ═══ */
 let chatHistory = [];
 
-function addChatMessage(role, content) {
+function addChatMessage(role, content, command = null) {
     const container = document.getElementById('ai-chat-messages');
     const msg = document.createElement('div');
     msg.className = `ai-msg ${role}`;
-    msg.textContent = content;
+
+    if (role === 'command' && command) {
+        msg.innerHTML = `
+            <span class="ai-cmd-text">${escHtml(command)}</span>
+            <button class="ai-run-btn" onclick="executeAICommand('${escHtml(command).replace(/'/g, "\\'")}')">Run</button>
+        `;
+    } else {
+        msg.textContent = content;
+    }
+
     container.appendChild(msg);
     container.scrollTop = container.scrollHeight;
 
-    if (role !== 'system') {
+    if (role !== 'system' && role !== 'command') {
         chatHistory.push({ role, content });
     }
+}
+
+function aiQuickAction(action) {
+    const input = document.getElementById('ai-chat-input');
+    input.value = action;
+    sendAIMessage();
+}
+
+function executeAICommand(command) {
+    addChatMessage('system', 'Executing command...');
+
+    fetch('/api/terminal', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: 'command=' + encodeURIComponent(command)
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.output) {
+            const lines = data.output.split('\n');
+            const hasReload = lines.some(l => l.trim() === 'RELOAD_CALENDAR');
+            const output = lines.filter(l => l.trim() !== 'RELOAD_CALENDAR').join('\n');
+            if (output) addChatMessage('system', output);
+            if (hasReload) {
+                addChatMessage('system', 'Refreshing calendar...');
+                setTimeout(() => location.reload(), 500);
+            }
+        } else {
+            addChatMessage('assistant', 'Command executed successfully');
+        }
+    })
+    .catch(() => addChatMessage('system', 'Failed to execute command'));
 }
 
 function sendAIMessage() {
@@ -3440,8 +3581,19 @@ function sendAIMessage() {
             addChatMessage('system', 'Error: ' + data.error);
         }
 
+        // If there's a suggested command, show it with a run button
+        if (data.command) {
+            addChatMessage('command', '', data.command);
+        }
+
         // Check if any commands were executed that modify events
         if (data.commands && data.commands.length > 0) {
+            data.commands.forEach(cmd => {
+                if (cmd.command) {
+                    addChatMessage('command', '', cmd.command);
+                }
+            });
+
             const hasEventModification = data.commands.some(cmd =>
                 cmd.command.includes('touch') || cmd.command.includes('RELOAD_CALENDAR')
             );
@@ -3470,9 +3622,58 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
 
-        addChatMessage('system', 'AI Assistant ready. Ask me anything!');
+        addChatMessage('system', 'AI Assistant ready. Try the quick actions above!');
     }
+
+    // Setup modal dragging for new event modal
+    setupModalDrag('newModalHead', 'newModalBox');
 });
+
+/* ═══ Modal Dragging ═══ */
+function setupModalDrag(handleId, boxId) {
+    const handle = document.getElementById(handleId);
+    const box = document.getElementById(boxId);
+    if (!handle || !box) return;
+
+    let isDragging = false;
+    let startX, startY, startLeft, startTop;
+
+    handle.addEventListener('mousedown', (e) => {
+        // Only drag if clicking on the header, not on input fields
+        if (e.target.tagName === 'INPUT' || e.target.tagName === 'BUTTON') return;
+
+        isDragging = true;
+        box.classList.add('draggable');
+
+        const rect = box.getBoundingClientRect();
+        startX = e.clientX;
+        startY = e.clientY;
+        startLeft = rect.left;
+        startTop = rect.top;
+
+        e.preventDefault();
+    });
+
+    document.addEventListener('mousemove', (e) => {
+        if (!isDragging) return;
+
+        const deltaX = e.clientX - startX;
+        const deltaY = e.clientY - startY;
+
+        box.style.position = 'fixed';
+        box.style.left = (startLeft + deltaX) + 'px';
+        box.style.top = (startTop + deltaY) + 'px';
+        box.style.transform = 'none';
+        box.style.margin = '0';
+    });
+
+    document.addEventListener('mouseup', () => {
+        if (isDragging) {
+            isDragging = false;
+            box.classList.remove('draggable');
+        }
+    });
+}
 
 function runAICommand() {
     const cmd = document.getElementById('ai-command-output').textContent;

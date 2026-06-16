@@ -137,7 +137,18 @@ string build_ai_prompt(const string &userInput, const string &currentUsername, c
     prompt << "7. cd group_name/subgroup - navigate to a subgroup\n";
     prompt << "8. ls - list available groups and subgroups\n";
     prompt << "9. rm event_id - delete an event by ID\n";
-    prompt << "10. dates - show stored dates from recent searches\n\n";
+    prompt << "10. dates - show stored dates from recent searches\n";
+    prompt << "11. test -n \"string\" - test if string is not empty (for conditionals)\n\n";
+
+    prompt << "Bash-like operators (can be combined):\n";
+    prompt << "- cmd1 && cmd2 - execute cmd2 only if cmd1 succeeds\n";
+    prompt << "- cmd1 || cmd2 - execute cmd2 only if cmd1 fails\n";
+    prompt << "- cmd1 ; cmd2 - execute both commands regardless of success\n";
+    prompt << "- if <condition> then <cmd1> else <cmd2> - conditional execution\n";
+    prompt << "Examples:\n";
+    prompt << "  cat 10 && touch \"Meeting\" in 15.06 14:00 length 01:00 \"Discussion\"\n";
+    prompt << "  grep \"important\" || echo \"No important events found\"\n";
+    prompt << "  cat 2026-06-20 ; dates\n\n";
 
     prompt << "Additional parameters for touch command:\n";
     prompt << "- P=high|medium|low (priority)\n";
@@ -152,7 +163,8 @@ string build_ai_prompt(const string &userInput, const string &currentUsername, c
 
     prompt << "User request: " << userInput << "\n\n";
     prompt << "Respond ONLY with the command(s) to execute, wrapped in ```bash code blocks.\n";
-    prompt << "If multiple commands are needed, put each on a new line.\n";
+    prompt << "You can chain commands with && (run if previous succeeds), || (run if previous fails), or ; (always run).\n";
+    prompt << "You can also use 'if <condition> then <cmd1> else <cmd2>' for conditional logic.\n";
     prompt << "Do NOT include explanations outside the code block.\n";
 
     return prompt.str();

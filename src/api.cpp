@@ -705,8 +705,14 @@ void api_routes(crow::SimpleApp &app) {
                 ai_response.pop_back();
             }
 
+            // Also provide the generated command as a suggestion if we executed one
+            json response_json = {{"response", ai_response}, {"commands", commandExecutions}};
+            if (!commandToExecute.empty()) {
+                response_json["command"] = commandToExecute;
+            }
+
             res.code = 200;
-            res.body = json({{"response", ai_response}, {"commands", commandExecutions}}).dump();
+            res.body = response_json.dump();
             return res;
 
         } catch (const exception &e) {

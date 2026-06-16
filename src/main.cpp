@@ -5,6 +5,7 @@
 #include "api.h"
 #include "login.h"
 #include "google_oauth.h"
+#include "profile.h"
 #include <cstdlib>
 // #include <string>
 int main() {
@@ -16,6 +17,7 @@ int main() {
     register_google_oauth_routes(app);
     dashboard(app);
     api_routes(app);
+    profile_routes(app);
 
     // app.port(8080).multithreaded().run();
     // app.port(8080).bindaddr("0.0.0.0").multithreaded().run();

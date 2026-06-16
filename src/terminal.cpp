@@ -62,7 +62,107 @@ string parseAndFormatDateTime(const string &dateStr, const string &timeStr) {
 // Vector to store dates from searches for AI to reference
 static vector<string> DATE_VECTOR;
 
+// Helper function to execute a single command
+string execute_single_command(const string &cmd_line, const string &currentUsername, string &currentgroup);
+
 string process_terminal_command(const string &fullLine, const string &currentUsername, string &currentgroup) {
+    if (fullLine.empty())
+        return "";
+
+    stringstream finalOutput;
+
+    // Handle command chaining with && and ||
+    vector<string> commands;
+    vector<string> operators;
+
+    string current;
+    bool inQuotes = false;
+
+    for (size_t i = 0; i < fullLine.length(); i++) {
+        char c = fullLine[i];
+
+        if (c == '"') {
+            inQuotes = !inQuotes;
+            current += c;
+        } else if (!inQuotes && i + 1 < fullLine.length() && c == '&' && fullLine[i + 1] == '&') {
+            // Found &&
+            if (!current.empty()) {
+                commands.push_back(current);
+                current.clear();
+            }
+            operators.push_back("&&");
+            i++; // Skip next &
+        } else if (!inQuotes && i + 1 < fullLine.length() && c == '|' && fullLine[i + 1] == '|') {
+            // Found ||
+            if (!current.empty()) {
+                commands.push_back(current);
+                current.clear();
+            }
+            operators.push_back("||");
+            i++; // Skip next |
+        } else if (!inQuotes && c == ';') {
+            // Found ;
+            if (!current.empty()) {
+                commands.push_back(current);
+                current.clear();
+            }
+            operators.push_back(";");
+        } else {
+            current += c;
+        }
+    }
+
+    if (!current.empty()) {
+        commands.push_back(current);
+    }
+
+    // If no operators found, just execute the single command
+    if (commands.size() == 1) {
+        return execute_single_command(fullLine, currentUsername, currentgroup);
+    }
+
+    // Execute commands with operators
+    bool lastSuccess = true;
+
+    for (size_t i = 0; i < commands.size(); i++) {
+        // Trim whitespace
+        string cmd = commands[i];
+        cmd.erase(0, cmd.find_first_not_of(" \t"));
+        cmd.erase(cmd.find_last_not_of(" \t") + 1);
+
+        bool shouldExecute = true;
+
+        if (i > 0) {
+            string op = operators[i - 1];
+            if (op == "&&" && !lastSuccess) {
+                shouldExecute = false;
+            } else if (op == "||" && lastSuccess) {
+                shouldExecute = false;
+            }
+        }
+
+        if (shouldExecute) {
+            string result = execute_single_command(cmd, currentUsername, currentgroup);
+            finalOutput << result;
+
+            // Check if command was successful
+            // Consider a command failed if it contains "Error:" or "not found" or "Syntax error"
+            lastSuccess = (result.find("Error:") == string::npos &&
+                          result.find("not found") == string::npos &&
+                          result.find("Syntax error") == string::npos &&
+                          result.find("Unknown command") == string::npos);
+
+            // Handle special signals
+            if (result.find("CLEAR_SIGNAL") != string::npos) {
+                return result;
+            }
+        }
+    }
+
+    return finalOutput.str();
+}
+
+string execute_single_command(const string &fullLine, const string &currentUsername, string &currentgroup) {
     if (fullLine.empty())
         return "";
 
@@ -144,7 +244,13 @@ string process_terminal_command(const string &fullLine, const string &currentUse
                << "  sync - import events from Google Calendar\n"
                << "  ai \"natural language request\" - use AI to execute commands\n"
                << "  rm <event_id> - delete an event\n"
-               << "  $DATE or $DATE[n] - use stored dates in commands (0=first)\n";
+               << "  $DATE or $DATE[n] - use stored dates in commands (0=first)\n"
+               << "\nBash-like operators:\n"
+               << "  cmd1 && cmd2 - execute cmd2 only if cmd1 succeeds\n"
+               << "  cmd1 || cmd2 - execute cmd2 only if cmd1 fails\n"
+               << "  cmd1 ; cmd2 - execute both commands regardless\n"
+               << "  if <condition> then <cmd1> else <cmd2> - conditional execution\n"
+               << "  test -n \"string\" or [ -n \"string\" ] - test if string is not empty\n";
     } else if (cmd == "cat") {
         string date;
         ss >> date;
@@ -612,6 +718,90 @@ string process_terminal_command(const string &fullLine, const string &currentUse
 
         if (!found) {
             output << "Error: Event with ID '" << eventId << "' not found.\n";
+        }
+    } else if (cmd == "if") {
+        // Simple if statement: if [condition_cmd] then [cmd1] else [cmd2]
+        string remaining;
+        getline(ss, remaining);
+
+        // Parse: if <condition> then <cmd1> else <cmd2>
+        size_t thenPos = remaining.find(" then ");
+        if (thenPos == string::npos) {
+            output << "Syntax error. Usage: if <condition_cmd> then <true_cmd> else <false_cmd>\n";
+            return output.str();
+        }
+
+        string condition = remaining.substr(0, thenPos);
+        condition.erase(0, condition.find_first_not_of(" \t"));
+
+        string afterThen = remaining.substr(thenPos + 6); // Skip " then "
+        size_t elsePos = afterThen.find(" else ");
+
+        string trueCmd, falseCmd;
+
+        if (elsePos != string::npos) {
+            trueCmd = afterThen.substr(0, elsePos);
+            falseCmd = afterThen.substr(elsePos + 6); // Skip " else "
+        } else {
+            trueCmd = afterThen;
+        }
+
+        // Trim commands
+        trueCmd.erase(0, trueCmd.find_first_not_of(" \t"));
+        trueCmd.erase(trueCmd.find_last_not_of(" \t") + 1);
+        falseCmd.erase(0, falseCmd.find_first_not_of(" \t"));
+        falseCmd.erase(falseCmd.find_last_not_of(" \t") + 1);
+
+        // Execute condition command
+        string condResult = execute_single_command(condition, currentUsername, currentgroup);
+
+        // Check if condition succeeded
+        bool condSuccess = (condResult.find("Error:") == string::npos &&
+                           condResult.find("not found") == string::npos &&
+                           condResult.find("Syntax error") == string::npos &&
+                           condResult.find("Unknown command") == string::npos &&
+                           condResult.find("No events found") == string::npos);
+
+        // Execute appropriate command
+        if (condSuccess && !trueCmd.empty()) {
+            output << execute_single_command(trueCmd, currentUsername, currentgroup);
+        } else if (!condSuccess && !falseCmd.empty()) {
+            output << execute_single_command(falseCmd, currentUsername, currentgroup);
+        }
+    } else if (cmd == "test" || cmd == "[") {
+        // Simple test command: test -n "string" or [ -n "string" ]
+        string remaining;
+        getline(ss, remaining);
+
+        // Remove trailing ] if present
+        if (!remaining.empty() && remaining.back() == ']') {
+            remaining.pop_back();
+        }
+
+        remaining.erase(0, remaining.find_first_not_of(" \t"));
+        remaining.erase(remaining.find_last_not_of(" \t") + 1);
+
+        if (remaining.empty()) {
+            output << "Usage: test -n \"string\" or test -z \"string\"\n";
+            return output.str();
+        }
+
+        vector<string> testArgs = parseArguments(remaining);
+
+        if (testArgs.size() >= 2 && testArgs[0] == "-n") {
+            // Test if string is not empty
+            bool notEmpty = !testArgs[1].empty();
+            if (!notEmpty) {
+                output << "test: false\n";
+            }
+        } else if (testArgs.size() >= 2 && testArgs[0] == "-z") {
+            // Test if string is empty
+            bool isEmpty = testArgs[1].empty();
+            if (!isEmpty) {
+                output << "test: false\n";
+            }
+        } else {
+            output << "Usage: test -n \"string\" or test -z \"string\"\n";
         }
     } else {
         output << "Unknown command. Try 'help'.\n";

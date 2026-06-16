@@ -12,6 +12,7 @@ add_executable(calang
     src/dashboard.cpp
     src/login.cpp
     src/registration.cpp
+    src/profile.cpp
     src/functions.cpp
     src/cookies.cpp
     src/event.cpp

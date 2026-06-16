@@ -1,6 +1,9 @@
 #include <crow/app.h>
 #include "functions.h"
 #include "cookies.h"
+#include <nlohmann/json.hpp>
+#include <fstream>
+#include <filesystem>
 string escape_html(const string &text) {
     string escaped;
     escaped.reserve(text.size());
@@ -60,9 +63,29 @@ void dashboard(crow::SimpleApp &app) {
         monday_time = mktime(&monday_tm);
 
         string html = loadHtmlTemplate("templates/dashboard.html");
-        size_t usrname = html.find("{{username}}");
-        if (usrname != string::npos)
-            html.replace(usrname, 12, username);
+
+        string name = username;
+        string profile_picture = ""; // Fallback will be handled in template by onerror
+        string profile_path = "users/" + username + "/profile.json";
+        if (std::filesystem::exists(profile_path)) {
+            std::ifstream fin(profile_path);
+            nlohmann::json p;
+            fin >> p;
+            fin.close();
+            name = p.value("name", username);
+            profile_picture = p.value("profile_picture", "");
+        }
+
+        auto replace_tag = [&](string tag, string val) {
+            size_t pos;
+            while ((pos = html.find(tag)) != string::npos) {
+                html.replace(pos, tag.length(), val);
+            }
+        };
+
+        replace_tag("{{username}}", username);
+        replace_tag("{{name}}", name);
+        replace_tag("{{profile_picture}}", profile_picture);
 
         char buf[64];
         strftime(buf, sizeof(buf), "%Y-%m-%d", &monday_tm);
@@ -85,11 +108,7 @@ void dashboard(crow::SimpleApp &app) {
         strftime(buf2, sizeof(buf2), "%d.%m.%Y", &sunday_tm);
         string week_range = string(buf) + " - " + string(buf2);
 
-        auto replace_tag = [&](string tag, string val) {
-            size_t pos = html.find(tag);
-            if (pos != string::npos)
-                html.replace(pos, tag.length(), val);
-        };
+
 
         replace_tag("{{prev_week}}", prev_week_str);
         replace_tag("{{next_week}}", next_week_str);
