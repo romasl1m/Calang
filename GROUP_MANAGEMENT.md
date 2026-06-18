@@ -4,33 +4,40 @@ This document describes all the group management features available in Calang.
 
 ## 🎯 Features Overview
 
-### 1. **Group Settings**
+### 1. **Group Sharing & Joining**
+- **QR Code Generation**: Generate QR codes for easy group joining
+- **Shareable Join Links**: Create and copy join links for any group
+- **Join via Link or QR**: Users can join by scanning QR codes or clicking links
+- **Enhanced Join Modal**: Dedicated modal for joining groups with link/ID support
+- **Auto-Join Flow**: Clicking join links automatically opens join modal
+
+### 2. **Group Settings**
 - **Max Members Limit**: Set a maximum number of members (0 = unlimited)
 - **Private Groups**: Make groups private with password protection
 - **Edit Settings**: Only the group creator can modify settings
 
-### 2. **Member Management**
+### 3. **Member Management**
 - **View Members**: See all group members with creator badge
 - **Kick Members**: Remove members from the group (creator only)
 - **Member List**: Shows avatars and roles
 
-### 3. **Join Request System**
+### 4. **Join Request System**
 - **Send Join Request**: Users can request to join private groups
 - **Approve/Reject Requests**: Creators can manage join requests
 - **Request Notifications**: Creators see pending requests in group info panel
 
-### 4. **Invite System**
+### 5. **Invite System**
 - **Send Invites**: Group members can invite others to join
 - **Invite Notifications**: Users see pending invites with a badge in topbar
 - **Accept/Reject Invites**: Users can accept or decline group invites
 - **Invite Counter**: Visual indicator showing number of pending invites
 
-### 5. **Delete Group**
+### 6. **Delete Group**
 - **Full Deletion**: Remove entire group including all events, subgroups, and members
 - **Creator Only**: Only the group creator can delete the group
 - **Confirmation Dialog**: Warns before permanent deletion
 
-### 6. **Subgroup Management**
+### 7. **Subgroup Management**
 - **Nested Subgroups**: Support for hierarchical subgroup structure (e.g., team1/subteam1)
 - **Add Subgroups**: Add new subgroups from the group info panel
 - **Filter by Subgroup**: View events for specific subgroups only
@@ -39,6 +46,11 @@ This document describes all the group management features available in Calang.
 ---
 
 ## 📋 API Endpoints
+
+### Group Joining
+- `GET /join/<group_id>` - Join link route (redirects to dashboard with auto-join)
+  - Redirects to login if not authenticated
+  - Preserves join intent through authentication flow
 
 ### Group Settings
 - `POST /api/update_group_settings` - Update max members, privacy, and password
@@ -102,32 +114,36 @@ Located on the right side when right-clicking a group. Contains:
 2. **Group ID Section**
    - Copy ID button for sharing
 
-3. **Settings Section** (Creator only)
+3. **Share Group Section**
+   - Copy Join Link button (generates shareable URL)
+   - Show QR Code button (opens QR modal)
+
+4. **Settings Section** (Creator only)
    - Max members display
    - Privacy status (Public/Private)
    - "Edit Settings" button
 
-4. **Owner Section**
+5. **Owner Section**
    - Shows group creator with badge
 
-5. **Members Section**
+6. **Members Section**
    - List of all members with avatars
    - Creator badge for owner
    - Kick button for other members (creator only)
 
-6. **Join Requests Section** (Creator only)
+7. **Join Requests Section** (Creator only)
    - Shows pending join requests
    - Approve/Reject buttons for each request
 
-7. **Invite Section** (Creator only)
+8. **Invite Section** (Creator only)
    - Input field to enter username
    - "Invite" button to send invite
 
-8. **Subgroups Section**
+9. **Subgroups Section**
    - List of all subgroups with hierarchy
    - "Add Subgroup" input and button
 
-9. **Delete Section** (Creator only)
+10. **Delete Section** (Creator only)
    - Red "Delete Group" button
 
 ### Group Settings Modal
@@ -136,6 +152,22 @@ Appears when clicking "Edit Settings":
 - Private group checkbox
 - Password field (shown when private is checked)
 - Save/Cancel buttons
+
+### QR Code Modal
+Displays when clicking "Show QR Code":
+- Large QR code image (200x200px)
+- Group name display
+- Copyable join link in text field
+- Copy Link button
+- QR code encodes: `https://your-domain.com/join/{group_id}`
+
+### Join Group Modal
+Accessible via "🔗 Join Group" button in topbar:
+- Input field accepting group ID or full join link
+- Automatic ID extraction from links
+- Password field (shown only for private groups)
+- Join button with error handling
+- Auto-opens when clicking join links
 
 ### Invites Notification
 Located in top-right corner:
@@ -169,6 +201,39 @@ Located in top-right corner:
 ---
 
 ## 💡 Usage Examples
+
+### Sharing a Group via QR Code
+1. Right-click on your group in sidebar
+2. Click "📱 Show QR Code" in Share Group section
+3. QR code modal appears with scannable code
+4. Others can scan with phone camera to get join link
+5. Or click "Copy Link" to share via messaging
+
+### Sharing a Group via Link
+1. Right-click on your group in sidebar
+2. Click "📋 Copy Join Link" in Share Group section
+3. Link is copied to clipboard
+4. Share link via email, chat, or social media
+5. Recipients click link to auto-join
+
+### Joining via QR Code
+1. Scan QR code with phone camera
+2. Opens join link in browser
+3. If not logged in, redirected to login
+4. After login, join modal opens automatically
+5. Group ID is pre-filled
+6. Enter password if private group
+7. Click "Join"
+
+### Joining via Link
+1. Click join link from message/email
+2. Same flow as QR code above
+
+### Joining Manually
+1. Click "🔗 Join Group" button in topbar
+2. Enter group ID or paste full join link
+3. Click "Join"
+4. If private, enter password when prompted
 
 ### Creating a Private Group
 1. Click "+ New Group" in sidebar

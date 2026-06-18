@@ -11,6 +11,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
     <style>
         :root {
             --navy-dark: #0a0e27;
@@ -2049,6 +2050,7 @@
                     Invites
                     <span id="invites-count" style="position: absolute; top: -8px; right: -8px; background: var(--purple-primary); color: white; border-radius: 50%; width: 20px; height: 20px; font-size: 10px; display: flex; align-items: center; justify-content: center; font-weight: 700;">0</span>
                 </button>
+                <button class="logout-btn" style="border-color: var(--success); color: var(--success);" onclick="openJoinGroupModal()">🔗 Join Group</button>
                 <button class="logout-btn" style="border-color: var(--blue-primary); color: var(--blue-primary);" onclick="location.href='/profile'">Profile</button>
                 <button class="logout-btn" onclick="location.href='/logout'">Logout</button>
             </div>
@@ -2123,6 +2125,13 @@
                 <div class="gi-id-copy-row">
                     <code id="gi-group-id">—</code>
                     <button class="gi-copy-btn" onclick="copyGroupId()">Copy ID</button>
+                </div>
+            </div>
+            <div class="gi-section">
+                <div class="gi-section-title">Share Group</div>
+                <div style="display:flex; flex-direction:column; gap:8px;">
+                    <button class="gi-copy-btn" onclick="copyJoinLink()" style="width:100%;">📋 Copy Join Link</button>
+                    <button class="gi-copy-btn" onclick="showQRCode()" style="width:100%;">📱 Show QR Code</button>
                 </div>
             </div>
             <div class="gi-section" id="gi-delete-section" style="display:none;">
@@ -2250,6 +2259,50 @@
     </div>
     <div id="invites-list" style="display:flex; flex-direction:column; gap:8px;">
         <div style="font-size:11px; color:var(--text-dim);">No pending invites</div>
+    </div>
+</div>
+
+<!-- ═══════════════════════ QR CODE MODAL ═══════════════════════ -->
+<div id="qrCodeModal" class="modal-overlay">
+    <div class="modal-box">
+        <div class="modal-head">
+            <span>Group QR Code</span>
+        </div>
+        <div class="modal-body" style="display:flex; flex-direction:column; align-items:center; gap:16px;">
+            <div id="qrCodeDisplay" style="padding:16px; background:white; border-radius:8px;"></div>
+            <div style="text-align:center; font-size:12px; color:var(--text-mid);">
+                Scan this QR code to join the group
+            </div>
+            <div id="qrGroupName" style="font-size:14px; font-weight:600; color:var(--text);"></div>
+            <input type="text" id="qrJoinLink" readonly class="form-control" style="font-size:11px; text-align:center; cursor:pointer;" onclick="this.select()">
+        </div>
+        <div class="modal-foot">
+            <button type="button" class="btn btn-ghost" onclick="closeQRCodeModal()">Close</button>
+            <button type="button" class="btn btn-primary" onclick="copyQRLink()">Copy Link</button>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════════════════ JOIN GROUP MODAL ═══════════════════════ -->
+<div id="joinGroupModal" class="modal-overlay">
+    <div class="modal-box">
+        <div class="modal-head">
+            <span>Join Group</span>
+        </div>
+        <div class="modal-body">
+            <div class="form-group">
+                <label>Group ID or Join Link</label>
+                <input type="text" class="form-control" id="join-modal-group-id" placeholder="Enter group ID or paste join link">
+            </div>
+            <div class="form-group" id="join-password-wrapper" style="display:none;">
+                <label>Password (Private Group)</label>
+                <input type="password" class="form-control" id="join-modal-password" placeholder="Enter group password">
+            </div>
+        </div>
+        <div class="modal-foot">
+            <button type="button" class="btn btn-ghost" onclick="closeJoinGroupModal()">Cancel</button>
+            <button type="button" class="btn btn-primary" onclick="joinGroupFromModal()">Join</button>
+        </div>
     </div>
 </div>
 
@@ -3177,6 +3230,103 @@ function copyGroupId() {
     });
 }
 
+function copyJoinLink() {
+    const id = document.getElementById('gi-group-id').textContent;
+    const link = window.location.origin + '/join/' + id;
+    navigator.clipboard.writeText(link).then(() => {
+        const btn = event.target;
+        const originalText = btn.textContent;
+        btn.textContent = '✓ Copied!';
+        setTimeout(() => { btn.textContent = originalText; }, 1500);
+    });
+}
+
+function showQRCode() {
+    const id = document.getElementById('gi-group-id').textContent;
+    const name = document.getElementById('gi-name').textContent;
+    const link = window.location.origin + '/join/' + id;
+
+    document.getElementById('qrGroupName').textContent = name;
+    document.getElementById('qrJoinLink').value = link;
+
+    // Clear previous QR code
+    const qrDisplay = document.getElementById('qrCodeDisplay');
+    qrDisplay.innerHTML = '';
+
+    // Generate new QR code
+    new QRCode(qrDisplay, {
+        text: link,
+        width: 200,
+        height: 200,
+        colorDark: '#0a0e27',
+        colorLight: '#ffffff',
+        correctLevel: QRCode.CorrectLevel.H
+    });
+
+    document.getElementById('qrCodeModal').style.display = 'flex';
+}
+
+function closeQRCodeModal() {
+    document.getElementById('qrCodeModal').style.display = 'none';
+}
+
+function copyQRLink() {
+    const link = document.getElementById('qrJoinLink').value;
+    navigator.clipboard.writeText(link).then(() => {
+        const btn = event.target;
+        btn.textContent = '✓ Copied!';
+        setTimeout(() => { btn.textContent = 'Copy Link'; }, 1500);
+    });
+}
+
+function openJoinGroupModal() {
+    document.getElementById('joinGroupModal').style.display = 'flex';
+    document.getElementById('join-modal-group-id').value = '';
+    document.getElementById('join-modal-password').value = '';
+    document.getElementById('join-password-wrapper').style.display = 'none';
+}
+
+function closeJoinGroupModal() {
+    document.getElementById('joinGroupModal').style.display = 'none';
+}
+
+function joinGroupFromModal() {
+    let input = document.getElementById('join-modal-group-id').value.trim();
+    const password = document.getElementById('join-modal-password').value;
+
+    if (!input) {
+        alert('Please enter a group ID or join link');
+        return;
+    }
+
+    // Extract group ID from join link if a full URL is provided
+    if (input.includes('/join/')) {
+        const parts = input.split('/join/');
+        input = parts[parts.length - 1];
+    }
+
+    const body = 'group_id=' + encodeURIComponent(input) +
+                 (password ? '&password=' + encodeURIComponent(password) : '');
+
+    fetch('/api/join_group', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: body
+    }).then(r => {
+        if (r.status === 403) {
+            // Private group - show password field
+            document.getElementById('join-password-wrapper').style.display = 'block';
+            alert('This is a private group. Please enter the password.');
+        } else if (r.ok) {
+            closeJoinGroupModal();
+            alert('Successfully joined the group!');
+            location.reload();
+        } else {
+            r.text().then(text => alert(text || 'Failed to join group.'));
+        }
+    }).catch(() => alert('Error joining group.'));
+}
+
 function deleteCurrentGroup() {
     if (!currentOpenGroupId) return;
 
@@ -3829,6 +3979,20 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Setup modal dragging for new event modal
     setupModalDrag('newModalHead', 'newModalBox');
+
+    // Auto-open join group modal if join parameter is present
+    const urlParams = new URLSearchParams(window.location.search);
+    const joinGroupId = urlParams.get('join');
+    if (joinGroupId) {
+        // Remove the join parameter from URL
+        urlParams.delete('join');
+        const newUrl = window.location.pathname + (urlParams.toString() ? '?' + urlParams.toString() : '');
+        window.history.replaceState({}, '', newUrl);
+
+        // Open join modal with pre-filled group ID
+        openJoinGroupModal();
+        document.getElementById('join-modal-group-id').value = joinGroupId;
+    }
 });
 
 /* ═══ Modal Dragging ═══ */

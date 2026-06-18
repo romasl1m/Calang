@@ -3,6 +3,7 @@
 #include <string>
 #include <sstream>
 #include "functions.h"
+#include "cookies.h"
 using namespace std;
 
 void core_routes(crow::SimpleApp &app) {
@@ -29,6 +30,24 @@ void core_routes(crow::SimpleApp &app) {
             res.add_header("Content-Type", "image/jpeg");
         else
             res.add_header("Content-Type", "application/octet-stream");
+        return res;
+    });
+
+    CROW_ROUTE(app, "/join/<string>")([](const crow::request &req, const std::string &group_id) {
+        // Check if user is logged in
+        string cookie_header = req.get_header_value("Cookie");
+        string username = get_logged_in_user(cookie_header);
+
+        if (username.empty()) {
+            // Redirect to login with return URL
+            crow::response res(302);
+            res.add_header("Location", "/login?return=/join/" + group_id);
+            return res;
+        }
+
+        // Redirect to dashboard with auto-join parameter
+        crow::response res(302);
+        res.add_header("Location", "/dashboard?join=" + group_id);
         return res;
     });
 }
