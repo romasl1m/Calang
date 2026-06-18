@@ -1186,7 +1186,6 @@
             position: fixed;
             inset: 0;
             background: rgba(10, 14, 39, 0.85);
-            backdrop-filter: blur(8px);
             align-items: center;
             justify-content: center;
             z-index: 999;
@@ -2034,16 +2033,6 @@
                     </div>
                 </div>
             </div>
-
-            <!-- Quick group actions -->
-            <div class="sb-form-block">
-                <label>Group Actions</label>
-                <div class="sb-row">
-                    <input type="text" class="sb-input" id="group-action-input" placeholder="Group name or ID">
-                    <button class="sb-btn" onclick="quickCreateGroup()" title="Create group">+</button>
-                    <button class="sb-btn join" onclick="quickJoinGroup()" title="Join group">→</button>
-                </div>
-            </div>
         </div>
     </aside>
 
@@ -2055,7 +2044,11 @@
                 <img class="avatar" src="{{profile_picture}}" onerror="this.style.display='none'">
                 <div class="user-greet">Welcome, <strong>{{name}}</strong></div>
             </div>
-            <div class="tb-right" style="display: flex; gap: 10px;">
+            <div class="tb-right" style="display: flex; gap: 10px; align-items: center;">
+                <button id="invites-badge" class="logout-btn" onclick="toggleInvitesNotification()" style="display:none; border-color: var(--purple-primary); color: var(--purple-primary); position: relative;">
+                    Invites
+                    <span id="invites-count" style="position: absolute; top: -8px; right: -8px; background: var(--purple-primary); color: white; border-radius: 50%; width: 20px; height: 20px; font-size: 10px; display: flex; align-items: center; justify-content: center; font-weight: 700;">0</span>
+                </button>
                 <button class="logout-btn" style="border-color: var(--blue-primary); color: var(--blue-primary);" onclick="location.href='/profile'">Profile</button>
                 <button class="logout-btn" onclick="location.href='/logout'">Logout</button>
             </div>
@@ -2063,6 +2056,8 @@
 
         <div class="toolbar">
             <button class="tb-btn" onclick="openNewModal()">+ New event</button>
+            <button class="tb-btn" onclick="openNewGroupModal('group')" title="Create new group">+ New group</button>
+            <!-- <button class="tb-btn" onclick="openNewGroupModal('subgroup')" title="Create new subgroup">+ New subgroup</button> -->
             <button class="tb-btn term" onclick="toggleTerminal()">_ terminal</button>
             <button class="tb-btn term mobile-term-btn" onclick="toggleTerminal()" style="display:none;">⌘</button>
             <button class="tb-btn" onclick="syncGoogleCalendar()" title="Sync with Google Calendar" style="background: transparent; border-color: var(--success); color: var(--success);">Sync</button>
@@ -2145,11 +2140,42 @@
                     </div>
                 </div>
             </div>
+            <div class="gi-section" id="gi-settings-section" style="display:none;">
+                <div class="gi-section-title">Settings</div>
+                <div style="display:flex; flex-direction:column; gap:8px;">
+                    <div style="font-size:11px; color:var(--text-mid);">
+                        <strong>Max Members:</strong> <span id="gi-max-people">0</span> <span style="color:var(--text-dim);">(0 = unlimited)</span>
+                    </div>
+                    <div style="font-size:11px; color:var(--text-mid);">
+                        <strong>Privacy:</strong> <span id="gi-privacy">Public</span>
+                    </div>
+                    <button class="gi-copy-btn" onclick="openGroupSettingsModal()" style="width:100%; margin-top:6px;">Edit Settings</button>
+                </div>
+            </div>
             <div class="gi-section">
                 <div class="gi-section-title">Owner</div>
                 <div id="gi-creator" class="gi-member">
                     <div class="gi-member-avatar">?</div>
                     <span class="gi-member-name">—</span>
+                </div>
+            </div>
+            <div class="gi-section" id="gi-members-section">
+                <div class="gi-section-title">Members</div>
+                <div id="gi-members-list" style="display:flex; flex-direction:column; gap:6px;">
+                    <div style="font-size:11px; color:var(--text-dim);">No members</div>
+                </div>
+            </div>
+            <div class="gi-section" id="gi-join-requests-section" style="display:none;">
+                <div class="gi-section-title">Join Requests</div>
+                <div id="gi-join-requests-list" style="display:flex; flex-direction:column; gap:6px;">
+                    <div style="font-size:11px; color:var(--text-dim);">No pending requests</div>
+                </div>
+            </div>
+            <div class="gi-section" id="gi-invite-section" style="display:none;">
+                <div class="gi-section-title">Invite User</div>
+                <div class="sb-row">
+                    <input type="text" class="sb-input" id="invite-username" placeholder="Username">
+                    <button class="sb-btn" onclick="sendInviteToUser()">Invite</button>
                 </div>
             </div>
             <div class="gi-section" id="gi-subgroups-section">
@@ -2188,6 +2214,94 @@
     </div>
 
 </div><!-- /.app -->
+
+<!-- ═══════════════════════ GROUP SETTINGS MODAL ═══════════════════════ -->
+<div id="groupSettingsModal" class="modal-overlay">
+    <div class="modal-box">
+        <div class="modal-head">
+            <span>Group Settings</span>
+        </div>
+        <div class="modal-body">
+            <div class="form-group">
+                <label>Max Members (0 for unlimited)</label>
+                <input type="number" class="form-control" id="gs_max_people" min="0" value="0">
+            </div>
+            <div class="form-group checkbox-group" style="margin-top: 15px;">
+                <input type="checkbox" id="gs_is_private" onchange="togglePrivateGroupSettings(this)">
+                <label for="gs_is_private">Private group (requires password)</label>
+            </div>
+            <div class="form-group" id="gs_password_wrapper" style="display:none;">
+                <label>Password</label>
+                <input type="password" class="form-control" id="gs_password" placeholder="Group password">
+            </div>
+        </div>
+        <div class="modal-foot">
+            <button type="button" class="btn btn-ghost" onclick="closeGroupSettingsModal()">Cancel</button>
+            <button type="button" class="btn btn-primary" onclick="saveGroupSettings()">Save</button>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════════════════ INVITES NOTIFICATION ═══════════════════════ -->
+<div id="invitesNotification" style="display:none; position:fixed; top:70px; right:20px; z-index:2000; background:rgba(19, 23, 41, 0.98); backdrop-filter:blur(20px); border:1px solid var(--border); border-radius:12px; padding:16px; width:320px; box-shadow:0 8px 32px rgba(0,0,0,0.5);">
+    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;">
+        <div style="font-size:14px; font-weight:600; color:var(--text);">Group Invites</div>
+        <div style="cursor:pointer; color:var(--text-dim); font-size:18px;" onclick="closeInvitesNotification()">✕</div>
+    </div>
+    <div id="invites-list" style="display:flex; flex-direction:column; gap:8px;">
+        <div style="font-size:11px; color:var(--text-dim);">No pending invites</div>
+    </div>
+</div>
+
+<!-- ═══════════════════════ NEW GROUP MODAL ═══════════════════════ -->
+<div id="newGroupModal" class="modal-overlay">
+    <div class="modal-box" id="newGroupModalBox">
+        <div class="modal-head" id="newGroupModalHead">
+            <span>New Group / Subgroup</span>
+            <span class="modal-drag-handle">
+                <span></span><span></span><span></span>
+                <span></span><span></span><span></span>
+            </span>
+        </div>
+        <div class="modal-body">
+            <div class="form-group" style="margin-top:13px;">
+                <label>Type</label>
+                <select class="form-control" id="g_type" onchange="toggleGroupType(this.value)">
+                    <option value="group">Group</option>
+                    <option value="subgroup">Subgroup</option>
+                </select>
+            </div>
+            <div class="form-group" id="g_parent_wrapper" style="display:none;">
+                <label>Parent Group</label>
+                <select class="form-control" id="g_parent">
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Name</label>
+                <input type="text" class="form-control" id="g_name" required placeholder="Name">
+            </div>
+            
+            <div id="g_group_only_fields">
+                <div class="form-group">
+                    <label>Max People Limit (0 for unlimited)</label>
+                    <input type="number" class="form-control" id="g_max_people" value="0" min="0">
+                </div>
+                <div class="form-group checkbox-group" style="margin-top: 15px;">
+                    <input type="checkbox" id="g_is_private" onchange="togglePrivateGroup(this)">
+                    <label for="g_is_private">Private group (requires password)</label>
+                </div>
+                <div class="form-group" id="g_password_wrapper" style="display:none;">
+                    <label>Password</label>
+                    <input type="password" class="form-control" id="g_password" placeholder="Group password">
+                </div>
+            </div>
+        </div>
+        <div class="modal-foot">
+            <button type="button" class="btn btn-ghost" onclick="closeNewGroupModal()">Cancel</button>
+            <button type="button" class="btn btn-primary" onclick="submitNewGroupModal()">Create</button>
+        </div>
+    </div>
+</div>
 
 <!-- ═══════════════════════ NEW EVENT MODAL ═══════════════════════ -->
 <div id="newModal" class="modal-overlay">
@@ -2793,17 +2907,6 @@ function loadGroups() {
 }
 
 /* Quick group actions */
-function quickCreateGroup() {
-    const input = document.getElementById('group-action-input');
-    const name = input.value.trim();
-    if (!name) {
-        alert('Enter a group name');
-        return;
-    }
-    createGroupWithName(name);
-    input.value = '';
-}
-
 function quickJoinGroup() {
     const input = document.getElementById('group-action-input');
     const id = input.value.trim();
@@ -2815,34 +2918,119 @@ function quickJoinGroup() {
     input.value = '';
 }
 
-function createGroupWithName(name) {
-    fetch('/api/create_group', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: 'name=' + encodeURIComponent(name)
-    })
-    .then(r => r.json())
-    .then(data => {
-        if (data.success && data.group_id) {
-            navigator.clipboard.writeText(data.group_id).catch(() => {});
-            loadGroups();
-            alert('Group "' + name + '" created!\nGroup ID: ' + data.group_id + '\n(Copied to clipboard)');
-        } else {
-            alert(data.error || 'Failed to create group');
-        }
-    })
-    .catch(() => alert('Failed to create group'));
+function openNewGroupModal(defaultType = 'group') {
+    document.getElementById('g_type').value = defaultType;
+    toggleGroupType(defaultType);
+    document.getElementById('g_name').value = '';
+    document.getElementById('g_max_people').value = '0';
+    document.getElementById('g_is_private').checked = false;
+    togglePrivateGroup(document.getElementById('g_is_private'));
+    document.getElementById('g_password').value = '';
+    
+    const parentSelect = document.getElementById('g_parent');
+    parentSelect.innerHTML = '';
+    if (typeof cachedGroups !== 'undefined') {
+        cachedGroups.forEach(g => {
+            const opt = document.createElement('option');
+            opt.value = g.id;
+            opt.textContent = g.name;
+            parentSelect.appendChild(opt);
+        });
+    }
+    if (typeof currentOpenGroupId !== 'undefined' && currentOpenGroupId) {
+        parentSelect.value = currentOpenGroupId;
+    }
+    
+    document.getElementById('newGroupModal').style.display = 'flex';
 }
 
-function joinGroupWithId(id) {
+function closeNewGroupModal() {
+    document.getElementById('newGroupModal').style.display = 'none';
+}
+
+function toggleGroupType(type) {
+    document.getElementById('g_parent_wrapper').style.display = (type === 'subgroup') ? 'block' : 'none';
+    document.getElementById('g_group_only_fields').style.display = (type === 'group') ? 'block' : 'none';
+}
+
+function togglePrivateGroup(cb) {
+    document.getElementById('g_password_wrapper').style.display = cb.checked ? 'block' : 'none';
+}
+
+function submitNewGroupModal() {
+    const type = document.getElementById('g_type').value;
+    const name = document.getElementById('g_name').value.trim();
+    if (!name) return alert('Enter a name');
+    
+    if (type === 'group') {
+        const maxP = document.getElementById('g_max_people').value;
+        const isPriv = document.getElementById('g_is_private').checked;
+        const pwd = document.getElementById('g_password').value;
+        
+        const body = 'name=' + encodeURIComponent(name) +
+                     '&max_people=' + encodeURIComponent(maxP) +
+                     '&is_private=' + encodeURIComponent(isPriv) +
+                     '&password=' + encodeURIComponent(pwd);
+                     
+        fetch('/api/create_group', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: body
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success && data.group_id) {
+                navigator.clipboard.writeText(data.group_id).catch(() => {});
+                closeNewGroupModal();
+                loadGroups();
+                alert('Group "' + name + '" created!\nGroup ID: ' + data.group_id + '\n(Copied to clipboard)');
+            } else {
+                alert(data.error || 'Failed to create group');
+            }
+        })
+        .catch(() => alert('Failed to create group'));
+    } else {
+        const parentId = document.getElementById('g_parent').value;
+        if (!parentId) return alert('Select a parent group');
+        
+        fetch('/api/add_subgroup', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: 'group_id=' + encodeURIComponent(parentId) + '&name=' + encodeURIComponent(name)
+        }).then(r => {
+            if (r.ok) {
+                closeNewGroupModal();
+                location.reload();
+            } else alert('Failed to add subgroup.');
+        });
+    }
+}
+
+function joinGroupWithId(id, password = "") {
     fetch('/api/join_group', {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: 'group_id=' + encodeURIComponent(id)
+        body: 'group_id=' + encodeURIComponent(id) + '&password=' + encodeURIComponent(password)
     })
-    .then(() => {
-        loadGroups();
-        alert('Joined group!');
+    .then(async r => {
+        if (r.ok) {
+            loadGroups();
+            alert('Joined group!');
+            return;
+        }
+        if (r.status === 403) {
+            const err = await r.text();
+            if (err === 'Incorrect password') {
+                const pwd = prompt('Enter password for private group:');
+                if (pwd !== null) {
+                    joinGroupWithId(id, pwd);
+                }
+            } else {
+                alert(err);
+            }
+        } else {
+            alert('Failed to join group');
+        }
     })
     .catch(() => alert('Failed to join group'));
 }
@@ -2882,15 +3070,29 @@ function openGroupInfo(groupId) {
         document.getElementById('gi-creator').querySelector('.gi-member-name').textContent = creator;
         document.getElementById('gi-creator').querySelector('.gi-member-avatar').textContent = creator.charAt(0).toUpperCase();
 
-        // Show delete button only if current user is the creator
+        // Show sections only if current user is the creator
         // Get current user from page
         const userGreet = document.querySelector('.user-greet strong');
         const currentUser = userGreet ? userGreet.textContent : '';
-        const deleteSection = document.getElementById('gi-delete-section');
-        if (currentUser === creator) {
-            deleteSection.style.display = 'block';
+        const isCreator = currentUser === creator;
+
+        document.getElementById('gi-delete-section').style.display = isCreator ? 'block' : 'none';
+        document.getElementById('gi-settings-section').style.display = isCreator ? 'block' : 'none';
+        document.getElementById('gi-invite-section').style.display = isCreator ? 'block' : 'none';
+
+        // Display settings
+        document.getElementById('gi-max-people').textContent = data.max_people || 0;
+        document.getElementById('gi-privacy').textContent = data.is_private ? 'Private' : 'Public';
+
+        // Display members
+        displayMembersList(data.members || [], creator, isCreator);
+
+        // Display join requests (only for creator)
+        if (isCreator && data.join_requests && data.join_requests.length > 0) {
+            document.getElementById('gi-join-requests-section').style.display = 'block';
+            displayJoinRequests(data.join_requests);
         } else {
-            deleteSection.style.display = 'none';
+            document.getElementById('gi-join-requests-section').style.display = 'none';
         }
 
         // Display subgroups
@@ -3888,6 +4090,325 @@ function updateViewButtons() {
     });
 }
 
+/* ═══ Group Management Functions ═══ */
+function displayMembersList(members, creator, isCreator) {
+    const container = document.getElementById('gi-members-list');
+    container.innerHTML = '';
+
+    if (!members || members.length === 0) {
+        container.innerHTML = '<div style="font-size:11px; color:var(--text-dim);">No members</div>';
+        return;
+    }
+
+    members.forEach(member => {
+        const row = document.createElement('div');
+        row.style.cssText = 'display:flex; align-items:center; gap:8px; padding:6px 8px; background:rgba(255,255,255,0.02); border:1px solid var(--border); border-radius:6px;';
+
+        const avatar = document.createElement('div');
+        avatar.style.cssText = 'width:28px; height:28px; border-radius:50%; background:linear-gradient(135deg, var(--purple-primary), var(--blue-primary)); display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:700; color:white; flex-shrink:0;';
+        avatar.textContent = member.charAt(0).toUpperCase();
+
+        const name = document.createElement('span');
+        name.style.cssText = 'flex:1; font-size:12px; color:var(--text); font-weight:500;';
+        name.textContent = member;
+
+        if (member === creator) {
+            const badge = document.createElement('span');
+            badge.style.cssText = 'font-size:10px; padding:2px 6px; background:rgba(139,92,246,0.15); color:var(--purple-primary); border-radius:4px; font-weight:600;';
+            badge.textContent = 'Owner';
+            name.appendChild(document.createTextNode(' '));
+            name.appendChild(badge);
+        }
+
+        row.appendChild(avatar);
+        row.appendChild(name);
+
+        // Add kick button if user is creator and member is not creator
+        if (isCreator && member !== creator) {
+            const kickBtn = document.createElement('button');
+            kickBtn.textContent = '✕';
+            kickBtn.style.cssText = 'background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3); color:var(--danger); padding:2px 8px; border-radius:4px; font-size:12px; cursor:pointer; transition:all 0.15s;';
+            kickBtn.title = 'Kick member';
+            kickBtn.onmouseenter = () => { kickBtn.style.background = 'rgba(239,68,68,0.2)'; };
+            kickBtn.onmouseleave = () => { kickBtn.style.background = 'rgba(239,68,68,0.1)'; };
+            kickBtn.onclick = () => kickMember(member);
+            row.appendChild(kickBtn);
+        }
+
+        container.appendChild(row);
+    });
+}
+
+function displayJoinRequests(requests) {
+    const container = document.getElementById('gi-join-requests-list');
+    container.innerHTML = '';
+
+    if (!requests || requests.length === 0) {
+        container.innerHTML = '<div style="font-size:11px; color:var(--text-dim);">No pending requests</div>';
+        return;
+    }
+
+    requests.forEach(username => {
+        const row = document.createElement('div');
+        row.style.cssText = 'display:flex; align-items:center; gap:8px; padding:6px 8px; background:rgba(255,255,255,0.02); border:1px solid var(--border); border-radius:6px;';
+
+        const name = document.createElement('span');
+        name.style.cssText = 'flex:1; font-size:12px; color:var(--text); font-weight:500;';
+        name.textContent = username;
+
+        const approveBtn = document.createElement('button');
+        approveBtn.textContent = '✓';
+        approveBtn.style.cssText = 'background:rgba(16,185,129,0.1); border:1px solid rgba(16,185,129,0.3); color:var(--success); padding:2px 8px; border-radius:4px; font-size:14px; cursor:pointer; transition:all 0.15s;';
+        approveBtn.title = 'Approve';
+        approveBtn.onclick = () => approveJoinRequest(username);
+
+        const rejectBtn = document.createElement('button');
+        rejectBtn.textContent = '✕';
+        rejectBtn.style.cssText = 'background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3); color:var(--danger); padding:2px 8px; border-radius:4px; font-size:14px; cursor:pointer; transition:all 0.15s;';
+        rejectBtn.title = 'Reject';
+        rejectBtn.onclick = () => rejectJoinRequest(username);
+
+        row.appendChild(name);
+        row.appendChild(approveBtn);
+        row.appendChild(rejectBtn);
+        container.appendChild(row);
+    });
+}
+
+function kickMember(username) {
+    if (!confirm(`Kick ${username} from this group?`)) return;
+
+    fetch('/api/kick_member', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: 'group_id=' + encodeURIComponent(currentOpenGroupId) + '&username=' + encodeURIComponent(username)
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            alert('Member kicked');
+            openGroupInfo(currentOpenGroupId); // Refresh
+        } else {
+            alert(data.error || 'Failed to kick member');
+        }
+    })
+    .catch(() => alert('Failed to kick member'));
+}
+
+function approveJoinRequest(username) {
+    fetch('/api/approve_join_request', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: 'group_id=' + encodeURIComponent(currentOpenGroupId) + '&username=' + encodeURIComponent(username)
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            alert(`${username} has been added to the group`);
+            openGroupInfo(currentOpenGroupId); // Refresh
+        } else {
+            alert(data.error || 'Failed to approve request');
+        }
+    })
+    .catch(() => alert('Failed to approve request'));
+}
+
+function rejectJoinRequest(username) {
+    fetch('/api/reject_join_request', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: 'group_id=' + encodeURIComponent(currentOpenGroupId) + '&username=' + encodeURIComponent(username)
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            alert('Request rejected');
+            openGroupInfo(currentOpenGroupId); // Refresh
+        } else {
+            alert(data.error || 'Failed to reject request');
+        }
+    })
+    .catch(() => alert('Failed to reject request'));
+}
+
+function sendInviteToUser() {
+    const input = document.getElementById('invite-username');
+    const username = input.value.trim();
+    if (!username) return alert('Enter a username');
+
+    fetch('/api/send_invite', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: 'group_id=' + encodeURIComponent(currentOpenGroupId) + '&invitee=' + encodeURIComponent(username)
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            alert(`Invite sent to ${username}`);
+            input.value = '';
+        } else {
+            alert(data.error || 'Failed to send invite');
+        }
+    })
+    .catch(() => alert('Failed to send invite'));
+}
+
+function openGroupSettingsModal() {
+    if (!currentOpenGroupId) return;
+
+    // Load current settings
+    fetch('/api/group_info?id=' + encodeURIComponent(currentOpenGroupId))
+    .then(r => r.json())
+    .then(data => {
+        document.getElementById('gs_max_people').value = data.max_people || 0;
+        document.getElementById('gs_is_private').checked = data.is_private || false;
+        togglePrivateGroupSettings(document.getElementById('gs_is_private'));
+        document.getElementById('gs_password').value = '';
+        document.getElementById('groupSettingsModal').classList.add('open');
+    });
+}
+
+function closeGroupSettingsModal() {
+    document.getElementById('groupSettingsModal').classList.remove('open');
+}
+
+function togglePrivateGroupSettings(cb) {
+    document.getElementById('gs_password_wrapper').style.display = cb.checked ? 'block' : 'none';
+}
+
+function saveGroupSettings() {
+    const maxPeople = document.getElementById('gs_max_people').value;
+    const isPrivate = document.getElementById('gs_is_private').checked;
+    const password = document.getElementById('gs_password').value;
+
+    if (isPrivate && !password) {
+        return alert('Private groups require a password');
+    }
+
+    fetch('/api/update_group_settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: 'group_id=' + encodeURIComponent(currentOpenGroupId) +
+              '&max_people=' + encodeURIComponent(maxPeople) +
+              '&is_private=' + encodeURIComponent(isPrivate) +
+              '&password=' + encodeURIComponent(password)
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            alert('Settings updated');
+            closeGroupSettingsModal();
+            openGroupInfo(currentOpenGroupId); // Refresh
+        } else {
+            alert(data.error || 'Failed to update settings');
+        }
+    })
+    .catch(() => alert('Failed to update settings'));
+}
+
+function loadUserInvites() {
+    fetch('/api/my_invites')
+    .then(r => r.json())
+    .then(invites => {
+        const badge = document.getElementById('invites-badge');
+        const count = document.getElementById('invites-count');
+
+        if (invites.length > 0) {
+            badge.style.display = 'inline-block';
+            count.textContent = invites.length;
+            displayInvitesList(invites);
+        } else {
+            badge.style.display = 'none';
+        }
+    })
+    .catch(() => {});
+}
+
+function displayInvitesList(invites) {
+    const container = document.getElementById('invites-list');
+    container.innerHTML = '';
+
+    if (!invites || invites.length === 0) {
+        container.innerHTML = '<div style="font-size:11px; color:var(--text-dim);">No pending invites</div>';
+        return;
+    }
+
+    invites.forEach(invite => {
+        const row = document.createElement('div');
+        row.style.cssText = 'display:flex; flex-direction:column; gap:6px; padding:8px; background:rgba(255,255,255,0.02); border:1px solid var(--border); border-radius:6px;';
+
+        const name = document.createElement('div');
+        name.style.cssText = 'font-size:13px; color:var(--text); font-weight:600;';
+        name.textContent = invite.group_name || invite.group_id;
+
+        const btnRow = document.createElement('div');
+        btnRow.style.cssText = 'display:flex; gap:4px;';
+
+        const acceptBtn = document.createElement('button');
+        acceptBtn.textContent = 'Accept';
+        acceptBtn.style.cssText = 'flex:1; background:linear-gradient(135deg, var(--success), #14b8a6); border:none; color:white; padding:4px 8px; border-radius:4px; font-size:11px; font-weight:600; cursor:pointer;';
+        acceptBtn.onclick = () => acceptInvite(invite.group_id);
+
+        const rejectBtn = document.createElement('button');
+        rejectBtn.textContent = 'Reject';
+        rejectBtn.style.cssText = 'flex:1; background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3); color:var(--danger); padding:4px 8px; border-radius:4px; font-size:11px; font-weight:600; cursor:pointer;';
+        rejectBtn.onclick = () => rejectInvite(invite.group_id);
+
+        btnRow.appendChild(acceptBtn);
+        btnRow.appendChild(rejectBtn);
+
+        row.appendChild(name);
+        row.appendChild(btnRow);
+        container.appendChild(row);
+    });
+}
+
+function toggleInvitesNotification() {
+    const notif = document.getElementById('invitesNotification');
+    notif.style.display = notif.style.display === 'none' ? 'block' : 'none';
+}
+
+function closeInvitesNotification() {
+    document.getElementById('invitesNotification').style.display = 'none';
+}
+
+function acceptInvite(groupId) {
+    fetch('/api/accept_invite', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: 'group_id=' + encodeURIComponent(groupId)
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            alert('Invite accepted! You are now a member.');
+            loadUserInvites();
+            loadGroups();
+        } else {
+            alert(data.error || 'Failed to accept invite');
+        }
+    })
+    .catch(() => alert('Failed to accept invite'));
+}
+
+function rejectInvite(groupId) {
+    fetch('/api/reject_invite', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: 'group_id=' + encodeURIComponent(groupId)
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            alert('Invite rejected');
+            loadUserInvites();
+        } else {
+            alert(data.error || 'Failed to reject invite');
+        }
+    })
+    .catch(() => alert('Failed to reject invite'));
+}
+
 /* ═══ Init ═══ */
 window.addEventListener('DOMContentLoaded', () => {
     // Initialize terminal prompt from cookie
@@ -3949,6 +4470,7 @@ window.addEventListener('DOMContentLoaded', () => {
     updateSubgroupFilterBadge();
     updateViewButtons();
     loadGroups();
+    loadUserInvites();
     drawNowLine();
     setInterval(drawNowLine, 60000); // refresh every minute
     if(sessionStorage.getItem('termOpen') === 'true'){

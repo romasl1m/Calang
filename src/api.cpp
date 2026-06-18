@@ -146,6 +146,9 @@ void api_routes(crow::SimpleApp &app) {
 
     CROW_ROUTE(app, "/api/create_group").methods("POST"_method)([](const crow::request &req) {
         string name = urlDecode(getParam(req.body, "name"));
+        string max_people_str = urlDecode(getParam(req.body, "max_people"));
+        string is_private_str = urlDecode(getParam(req.body, "is_private"));
+        string password = urlDecode(getParam(req.body, "password"));
         string cookie_header = req.get_header_value("Cookie");
         string user = get_logged_in_user(cookie_header);
 
@@ -155,8 +158,12 @@ void api_routes(crow::SimpleApp &app) {
         if (name.empty())
             return crow::response(400, json({{"error", "Group name cannot be empty"}}).dump());
 
+        int max_people = 0;
+        if (!max_people_str.empty()) max_people = stoi(max_people_str);
+        bool is_private = (is_private_str == "true" || is_private_str == "1");
+
         string generated_id;
-        create_group(name, user, generated_id);
+        create_group(name, user, generated_id, max_people, is_private, password);
 
         json response = {
             {"success", true},
@@ -171,6 +178,7 @@ void api_routes(crow::SimpleApp &app) {
 
     CROW_ROUTE(app, "/api/join_group").methods("POST"_method)([](const crow::request &req) {
         string group_id = urlDecode(getParam(req.body, "group_id"));
+        string password = urlDecode(getParam(req.body, "password"));
         string cookie_header = req.get_header_value("Cookie");
         string user = get_logged_in_user(cookie_header);
 
@@ -178,9 +186,16 @@ void api_routes(crow::SimpleApp &app) {
             return crow::response(401, "Unauthorized");
 
         string path = "groups/" + group_id + "/members.json";
-        if (!filesystem::exists(path)) {
+        string info_path = "groups/" + group_id + "/info.json";
+        if (!filesystem::exists(path) || !filesystem::exists(info_path)) {
             return crow::response(404, "Group not found");
         }
+
+        json info;
+        ifstream finfo(info_path);
+        if (finfo.is_open())
+            finfo >> info;
+        finfo.close();
 
         json members;
         ifstream fin(path);
@@ -191,6 +206,18 @@ void api_routes(crow::SimpleApp &app) {
         for (const auto &m : members) {
             if (m == user)
                 return crow::response(200, "Already a member");
+        }
+
+        if (info.value("is_private", false)) {
+            string expected_pass = info.value("password", "");
+            if (password != expected_pass) {
+                return crow::response(403, "Incorrect password");
+            }
+        }
+
+        int max_people = info.value("max_people", 0);
+        if (max_people > 0 && members.size() >= max_people) {
+            return crow::response(403, "Group is full");
         }
 
         members.push_back(user);
@@ -265,6 +292,165 @@ void api_routes(crow::SimpleApp &app) {
         return crow::response(200, "Subgroup added successfully");
     });
 
+    CROW_ROUTE(app, "/api/kick_member").methods("POST"_method)([](const crow::request &req) {
+        string group_id = urlDecode(getParam(req.body, "group_id"));
+        string username = urlDecode(getParam(req.body, "username"));
+        string cookie_header = req.get_header_value("Cookie");
+        string requester = get_logged_in_user(cookie_header);
+
+        if (requester.empty())
+            return crow::response(401, json({{"error", "Unauthorized"}}).dump());
+
+        if (kick_member(group_id, username, requester)) {
+            return crow::response(200, json({{"success", true}}).dump());
+        } else {
+            return crow::response(403, json({{"error", "Only the group creator can kick members"}}).dump());
+        }
+    });
+
+    CROW_ROUTE(app, "/api/update_group_settings").methods("POST"_method)([](const crow::request &req) {
+        string group_id = urlDecode(getParam(req.body, "group_id"));
+        string max_people_str = urlDecode(getParam(req.body, "max_people"));
+        string is_private_str = urlDecode(getParam(req.body, "is_private"));
+        string password = urlDecode(getParam(req.body, "password"));
+        string cookie_header = req.get_header_value("Cookie");
+        string requester = get_logged_in_user(cookie_header);
+
+        if (requester.empty())
+            return crow::response(401, json({{"error", "Unauthorized"}}).dump());
+
+        int max_people = max_people_str.empty() ? 0 : stoi(max_people_str);
+        bool is_private = (is_private_str == "true" || is_private_str == "1");
+
+        if (update_group_settings(group_id, requester, max_people, is_private, password)) {
+            return crow::response(200, json({{"success", true}}).dump());
+        } else {
+            return crow::response(403, json({{"error", "Only the group creator can update settings"}}).dump());
+        }
+    });
+
+    CROW_ROUTE(app, "/api/send_join_request").methods("POST"_method)([](const crow::request &req) {
+        string group_id = urlDecode(getParam(req.body, "group_id"));
+        string cookie_header = req.get_header_value("Cookie");
+        string username = get_logged_in_user(cookie_header);
+
+        if (username.empty())
+            return crow::response(401, json({{"error", "Unauthorized"}}).dump());
+
+        if (send_join_request(group_id, username)) {
+            return crow::response(200, json({{"success", true, "message", "Join request sent"}}).dump());
+        } else {
+            return crow::response(400, json({{"error", "Request already sent or group not found"}}).dump());
+        }
+    });
+
+    CROW_ROUTE(app, "/api/approve_join_request").methods("POST"_method)([](const crow::request &req) {
+        string group_id = urlDecode(getParam(req.body, "group_id"));
+        string username = urlDecode(getParam(req.body, "username"));
+        string cookie_header = req.get_header_value("Cookie");
+        string requester = get_logged_in_user(cookie_header);
+
+        if (requester.empty())
+            return crow::response(401, json({{"error", "Unauthorized"}}).dump());
+
+        if (approve_join_request(group_id, requester, username)) {
+            return crow::response(200, json({{"success", true}}).dump());
+        } else {
+            return crow::response(403, json({{"error", "Only the group creator can approve requests"}}).dump());
+        }
+    });
+
+    CROW_ROUTE(app, "/api/reject_join_request").methods("POST"_method)([](const crow::request &req) {
+        string group_id = urlDecode(getParam(req.body, "group_id"));
+        string username = urlDecode(getParam(req.body, "username"));
+        string cookie_header = req.get_header_value("Cookie");
+        string requester = get_logged_in_user(cookie_header);
+
+        if (requester.empty())
+            return crow::response(401, json({{"error", "Unauthorized"}}).dump());
+
+        if (reject_join_request(group_id, requester, username)) {
+            return crow::response(200, json({{"success", true}}).dump());
+        } else {
+            return crow::response(403, json({{"error", "Only the group creator can reject requests"}}).dump());
+        }
+    });
+
+    CROW_ROUTE(app, "/api/send_invite").methods("POST"_method)([](const crow::request &req) {
+        string group_id = urlDecode(getParam(req.body, "group_id"));
+        string invitee = urlDecode(getParam(req.body, "invitee"));
+        string cookie_header = req.get_header_value("Cookie");
+        string inviter = get_logged_in_user(cookie_header);
+
+        if (inviter.empty())
+            return crow::response(401, json({{"error", "Unauthorized"}}).dump());
+
+        if (send_invite(group_id, inviter, invitee)) {
+            return crow::response(200, json({{"success", true, "message", "Invite sent"}}).dump());
+        } else {
+            return crow::response(400, json({{"error", "Cannot send invite"}}).dump());
+        }
+    });
+
+    CROW_ROUTE(app, "/api/my_invites").methods("GET"_method)([](const crow::request &req) {
+        string cookie_header = req.get_header_value("Cookie");
+        string username = get_logged_in_user(cookie_header);
+
+        if (username.empty())
+            return crow::response(401, "Unauthorized");
+
+        vector<string> group_ids = get_user_invites(username);
+        json invites = json::array();
+
+        for (const auto &gid : group_ids) {
+            string info_path = "groups/" + gid + "/info.json";
+            if (filesystem::exists(info_path)) {
+                ifstream fin(info_path);
+                json info;
+                fin >> info;
+                fin.close();
+                invites.push_back({
+                    {"group_id", gid},
+                    {"group_name", info.value("name", "")}
+                });
+            }
+        }
+
+        crow::response res(200, invites.dump());
+        res.add_header("Content-Type", "application/json");
+        return res;
+    });
+
+    CROW_ROUTE(app, "/api/accept_invite").methods("POST"_method)([](const crow::request &req) {
+        string group_id = urlDecode(getParam(req.body, "group_id"));
+        string cookie_header = req.get_header_value("Cookie");
+        string username = get_logged_in_user(cookie_header);
+
+        if (username.empty())
+            return crow::response(401, json({{"error", "Unauthorized"}}).dump());
+
+        if (accept_invite(group_id, username)) {
+            return crow::response(200, json({{"success", true}}).dump());
+        } else {
+            return crow::response(400, json({{"error", "Invite not found"}}).dump());
+        }
+    });
+
+    CROW_ROUTE(app, "/api/reject_invite").methods("POST"_method)([](const crow::request &req) {
+        string group_id = urlDecode(getParam(req.body, "group_id"));
+        string cookie_header = req.get_header_value("Cookie");
+        string username = get_logged_in_user(cookie_header);
+
+        if (username.empty())
+            return crow::response(401, json({{"error", "Unauthorized"}}).dump());
+
+        if (reject_invite(group_id, username)) {
+            return crow::response(200, json({{"success", true}}).dump());
+        } else {
+            return crow::response(400, json({{"error", "Invite not found"}}).dump());
+        }
+    });
+
     CROW_ROUTE(app, "/api/group_info").methods("GET"_method)([](const crow::request &req) {
         string cookie_header = req.get_header_value("Cookie");
         string user = get_logged_in_user(cookie_header);
@@ -329,6 +515,15 @@ void api_routes(crow::SimpleApp &app) {
             creator = members[0].get<string>();
         }
 
+        // Get join requests (only for creator)
+        json join_requests = json::array();
+        if (creator == user) {
+            vector<string> requests = get_join_requests(group_id);
+            for (const auto &req_user : requests) {
+                join_requests.push_back(req_user);
+            }
+        }
+
         json result = {
             {"id", info.value("id", group_id)},
             {"name", info.value("name", "")},
@@ -336,7 +531,10 @@ void api_routes(crow::SimpleApp &app) {
             {"member_count", members.is_array() ? (int)members.size() : 0},
             {"event_count", event_count},
             {"subgroups", subgroups_raw},
-            {"creator", creator}};
+            {"creator", creator},
+            {"max_people", info.value("max_people", 0)},
+            {"is_private", info.value("is_private", false)},
+            {"join_requests", join_requests}};
 
         crow::response res(200, result.dump());
         res.add_header("Content-Type", "application/json");

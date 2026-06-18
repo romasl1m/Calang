@@ -108,8 +108,6 @@ void dashboard(crow::SimpleApp &app) {
         strftime(buf2, sizeof(buf2), "%d.%m.%Y", &sunday_tm);
         string week_range = string(buf) + " - " + string(buf2);
 
-
-
         replace_tag("{{prev_week}}", prev_week_str);
         replace_tag("{{next_week}}", next_week_str);
         replace_tag("{{week_range}}", week_range);
@@ -155,32 +153,33 @@ void dashboard(crow::SimpleApp &app) {
             time_t first_day_time = mktime(&first_day_tm);
             tm *fd_tm = localtime(&first_day_time);
             int fd_wday = (fd_tm->tm_wday == 0) ? 6 : (fd_tm->tm_wday - 1);
-            
+
             time_t start_cal_time = first_day_time - (fd_wday * 24 * 3600);
-            
+
             for (int i = 0; i < 42; i++) {
                 time_t current_day_time = start_cal_time + (i * 24 * 3600);
                 tm current_day_tm = *localtime(&current_day_time);
                 strftime(buf, sizeof(buf), "%Y-%m-%d", &current_day_tm);
                 string current_day_str = buf;
-                
+
                 string extra_class = (current_day_tm.tm_mon == fd_tm->tm_mon) ? "" : " other-month";
-                
+
                 time_t curr_now = time(0);
                 tm *curr_now_tm = localtime(&curr_now);
                 char buf_today[64];
                 strftime(buf_today, sizeof(buf_today), "%Y-%m-%d", curr_now_tm);
-                if (current_day_str == string(buf_today)) extra_class += " today";
-                
+                if (current_day_str == string(buf_today))
+                    extra_class += " today";
+
                 events_html += "<div class='month-day" + extra_class + "' data-day='" + current_day_str + "'>";
                 events_html += string("<div class='month-day-header") + (string(current_day_str) == string(buf_today) ? " today" : "") + "'>" + to_string(current_day_tm.tm_mday) + "</div>";
-                
+
                 for (const auto &e : events) {
-                     string dec_start = urlDecode(e.start);
-                     if (dec_start.size() >= 10 and dec_start.substr(0, 10) == current_day_str) {
-                         string dec_title = urlDecode(e.title);
-                         events_html += "<div class='month-event' title='" + dec_title + "'>" + dec_title + "</div>";
-                     }
+                    string dec_start = urlDecode(e.start);
+                    if (dec_start.size() >= 10 and dec_start.substr(0, 10) == current_day_str) {
+                        string dec_title = urlDecode(e.title);
+                        events_html += "<div class='month-event' title='" + dec_title + "'>" + dec_title + "</div>";
+                    }
                 }
                 events_html += "</div>";
             }
@@ -245,6 +244,3 @@ void dashboard(crow::SimpleApp &app) {
         return res;
     });
 }
-
-// ==================== NOWA TRASA W API_ROUTES ====================
-// Dodaj tę trasę wewnątrz funkcji api_routes(crow::SimpleApp& app):

@@ -360,7 +360,7 @@ vector<Event> get_all_events(const string &username) {
     }
     return events;
 }
-void create_group(const string &group_name, const string &creator, string &id) {
+void create_group(const string &group_name, const string &creator, string &id, int max_people, bool is_private, const string& password) {
     id = to_string(time(0));
     string path = "groups/" + id;
     filesystem::create_directories(path);
@@ -368,7 +368,11 @@ void create_group(const string &group_name, const string &creator, string &id) {
     json info = {
         {"name", group_name},
         {"id", id},
-        {"subgroups", json::array()}};
+        {"subgroups", json::object()},
+        {"max_people", max_people},
+        {"is_private", is_private},
+        {"password", password}
+    };
     ofstream f1(path + "/members.json");
     f1 << members.dump(4);
     ofstream f2(path + "/info.json");
@@ -473,6 +477,409 @@ string get_group_name(const string &group_id) {
     fin >> info;
 
     return info.value("name", group_id);
+}
+
+bool kick_member(const string &group_id, const string &username, const string &requester) {
+    string members_path = "groups/" + group_id + "/members.json";
+    if (not filesystem::exists(members_path))
+        return false;
+
+    ifstream fin(members_path);
+    json members;
+    fin >> members;
+    fin.close();
+
+    if (not members.is_array() || members.empty())
+        return false;
+
+    // Check if requester is the creator (first member)
+    string creator = members[0].get<string>();
+    if (creator != requester)
+        return false;
+
+    // Cannot kick the creator
+    if (username == creator)
+        return false;
+
+    // Remove the user
+    json filtered = json::array();
+    bool found = false;
+    for (const auto &member : members) {
+        if (member.get<string>() != username) {
+            filtered.push_back(member);
+        } else {
+            found = true;
+        }
+    }
+
+    if (not found)
+        return false;
+
+    ofstream fout(members_path);
+    fout << filtered.dump(4);
+    fout.close();
+
+    return true;
+}
+
+bool update_group_settings(const string &group_id, const string &requester, int max_people, bool is_private, const string &password) {
+    string info_path = "groups/" + group_id + "/info.json";
+    string members_path = "groups/" + group_id + "/members.json";
+
+    if (not filesystem::exists(info_path) || not filesystem::exists(members_path))
+        return false;
+
+    // Check if requester is the creator
+    ifstream fmem(members_path);
+    json members;
+    fmem >> members;
+    fmem.close();
+
+    if (not members.is_array() || members.empty())
+        return false;
+
+    string creator = members[0].get<string>();
+    if (creator != requester)
+        return false;
+
+    // Update settings
+    ifstream fin(info_path);
+    json info;
+    fin >> info;
+    fin.close();
+
+    info["max_people"] = max_people;
+    info["is_private"] = is_private;
+    if (is_private) {
+        info["password"] = password;
+    } else {
+        info["password"] = "";
+    }
+
+    ofstream fout(info_path);
+    fout << info.dump(4);
+    fout.close();
+
+    return true;
+}
+
+bool send_join_request(const string &group_id, const string &username) {
+    string requests_path = "groups/" + group_id + "/join_requests.json";
+    string group_path = "groups/" + group_id;
+
+    if (not filesystem::exists(group_path))
+        return false;
+
+    json requests = json::array();
+    if (filesystem::exists(requests_path)) {
+        ifstream fin(requests_path);
+        if (fin.is_open()) {
+            fin >> requests;
+            fin.close();
+        }
+    }
+
+    // Check if already requested
+    for (const auto &req : requests) {
+        if (req.get<string>() == username)
+            return false;
+    }
+
+    requests.push_back(username);
+
+    ofstream fout(requests_path);
+    fout << requests.dump(4);
+    fout.close();
+
+    return true;
+}
+
+bool approve_join_request(const string &group_id, const string &requester, const string &username) {
+    string members_path = "groups/" + group_id + "/members.json";
+    string requests_path = "groups/" + group_id + "/join_requests.json";
+
+    if (not filesystem::exists(members_path) || not filesystem::exists(requests_path))
+        return false;
+
+    // Check if requester is the creator
+    ifstream fmem(members_path);
+    json members;
+    fmem >> members;
+    fmem.close();
+
+    if (not members.is_array() || members.empty())
+        return false;
+
+    string creator = members[0].get<string>();
+    if (creator != requester)
+        return false;
+
+    // Check if request exists
+    ifstream freq(requests_path);
+    json requests;
+    freq >> requests;
+    freq.close();
+
+    bool found = false;
+    json filtered_requests = json::array();
+    for (const auto &req : requests) {
+        if (req.get<string>() == username) {
+            found = true;
+        } else {
+            filtered_requests.push_back(req);
+        }
+    }
+
+    if (not found)
+        return false;
+
+    // Add user to members
+    members.push_back(username);
+
+    ofstream fmem_out(members_path);
+    fmem_out << members.dump(4);
+    fmem_out.close();
+
+    // Remove from requests
+    ofstream freq_out(requests_path);
+    freq_out << filtered_requests.dump(4);
+    freq_out.close();
+
+    return true;
+}
+
+bool reject_join_request(const string &group_id, const string &requester, const string &username) {
+    string members_path = "groups/" + group_id + "/members.json";
+    string requests_path = "groups/" + group_id + "/join_requests.json";
+
+    if (not filesystem::exists(members_path) || not filesystem::exists(requests_path))
+        return false;
+
+    // Check if requester is the creator
+    ifstream fmem(members_path);
+    json members;
+    fmem >> members;
+    fmem.close();
+
+    if (not members.is_array() || members.empty())
+        return false;
+
+    string creator = members[0].get<string>();
+    if (creator != requester)
+        return false;
+
+    // Remove from requests
+    ifstream freq(requests_path);
+    json requests;
+    freq >> requests;
+    freq.close();
+
+    json filtered_requests = json::array();
+    bool found = false;
+    for (const auto &req : requests) {
+        if (req.get<string>() != username) {
+            filtered_requests.push_back(req);
+        } else {
+            found = true;
+        }
+    }
+
+    if (not found)
+        return false;
+
+    ofstream freq_out(requests_path);
+    freq_out << filtered_requests.dump(4);
+    freq_out.close();
+
+    return true;
+}
+
+vector<string> get_join_requests(const string &group_id) {
+    string requests_path = "groups/" + group_id + "/join_requests.json";
+    vector<string> requests;
+
+    if (not filesystem::exists(requests_path))
+        return requests;
+
+    ifstream fin(requests_path);
+    json data;
+    fin >> data;
+    fin.close();
+
+    if (data.is_array()) {
+        for (const auto &req : data) {
+            requests.push_back(req.get<string>());
+        }
+    }
+
+    return requests;
+}
+
+bool send_invite(const string &group_id, const string &inviter, const string &invitee) {
+    string members_path = "groups/" + group_id + "/members.json";
+    string invites_path = "users/" + invitee + "/invites.json";
+
+    if (not filesystem::exists(members_path))
+        return false;
+
+    // Check if inviter is a member
+    ifstream fmem(members_path);
+    json members;
+    fmem >> members;
+    fmem.close();
+
+    bool is_member = false;
+    for (const auto &member : members) {
+        if (member.get<string>() == inviter) {
+            is_member = true;
+            break;
+        }
+    }
+
+    if (not is_member)
+        return false;
+
+    // Check if invitee already a member
+    for (const auto &member : members) {
+        if (member.get<string>() == invitee)
+            return false; // Already a member
+    }
+
+    // Create user directory if it doesn't exist
+    string user_path = "users/" + invitee;
+    if (not filesystem::exists(user_path))
+        filesystem::create_directories(user_path);
+
+    json invites = json::array();
+    if (filesystem::exists(invites_path)) {
+        ifstream fin(invites_path);
+        if (fin.is_open()) {
+            fin >> invites;
+            fin.close();
+        }
+    }
+
+    // Check if already invited
+    for (const auto &inv : invites) {
+        if (inv["group_id"].get<string>() == group_id)
+            return false;
+    }
+
+    json invite = {
+        {"group_id", group_id},
+        {"inviter", inviter},
+        {"timestamp", time(0)}
+    };
+    invites.push_back(invite);
+
+    ofstream fout(invites_path);
+    fout << invites.dump(4);
+    fout.close();
+
+    return true;
+}
+
+vector<string> get_user_invites(const string &username) {
+    string invites_path = "users/" + username + "/invites.json";
+    vector<string> group_ids;
+
+    if (not filesystem::exists(invites_path))
+        return group_ids;
+
+    ifstream fin(invites_path);
+    json invites;
+    fin >> invites;
+    fin.close();
+
+    if (invites.is_array()) {
+        for (const auto &inv : invites) {
+            group_ids.push_back(inv["group_id"].get<string>());
+        }
+    }
+
+    return group_ids;
+}
+
+bool accept_invite(const string &group_id, const string &username) {
+    string invites_path = "users/" + username + "/invites.json";
+    string members_path = "groups/" + group_id + "/members.json";
+
+    if (not filesystem::exists(invites_path) || not filesystem::exists(members_path))
+        return false;
+
+    // Remove invite
+    ifstream fin(invites_path);
+    json invites;
+    fin >> invites;
+    fin.close();
+
+    json filtered_invites = json::array();
+    bool found = false;
+    for (const auto &inv : invites) {
+        if (inv["group_id"].get<string>() != group_id) {
+            filtered_invites.push_back(inv);
+        } else {
+            found = true;
+        }
+    }
+
+    if (not found)
+        return false;
+
+    ofstream finv_out(invites_path);
+    finv_out << filtered_invites.dump(4);
+    finv_out.close();
+
+    // Add to members
+    ifstream fmem(members_path);
+    json members;
+    fmem >> members;
+    fmem.close();
+
+    // Check if already a member
+    for (const auto &member : members) {
+        if (member.get<string>() == username)
+            return true; // Already a member, just remove invite
+    }
+
+    members.push_back(username);
+
+    ofstream fmem_out(members_path);
+    fmem_out << members.dump(4);
+    fmem_out.close();
+
+    return true;
+}
+
+bool reject_invite(const string &group_id, const string &username) {
+    string invites_path = "users/" + username + "/invites.json";
+
+    if (not filesystem::exists(invites_path))
+        return false;
+
+    ifstream fin(invites_path);
+    json invites;
+    fin >> invites;
+    fin.close();
+
+    json filtered_invites = json::array();
+    bool found = false;
+    for (const auto &inv : invites) {
+        if (inv["group_id"].get<string>() != group_id) {
+            filtered_invites.push_back(inv);
+        } else {
+            found = true;
+        }
+    }
+
+    if (not found)
+        return false;
+
+    ofstream fout(invites_path);
+    fout << filtered_invites.dump(4);
+    fout.close();
+
+    return true;
 }
 
 bool change_event_group(const string &event_id, const string &new_origin) {
