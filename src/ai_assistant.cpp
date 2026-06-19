@@ -38,6 +38,89 @@ string get_gemini_api_key() {
     return "";
 }
 
+string get_ai_model_type() {
+    // Try reading from AI config file
+    ifstream config_file(".ai_config");
+    if (config_file.is_open()) {
+        json config;
+        try {
+            config_file >> config;
+            config_file.close();
+            return config.value("model_type", "gemini");
+        } catch (...) {
+            config_file.close();
+        }
+    }
+
+    return "gemini"; // Default to Gemini
+}
+
+string call_local_qwen(const string &prompt) {
+    // Call local Qwen model via HTTP API (assuming llama.cpp server or similar)
+    CURL *curl;
+    CURLcode res;
+    string readBuffer;
+
+    curl = curl_easy_init();
+    if (!curl) {
+        return "Error: Failed to initialize CURL for local model";
+    }
+
+    // Read local model endpoint from config
+    string endpoint = "http://localhost:8080/completion";
+    ifstream config_file(".ai_config");
+    if (config_file.is_open()) {
+        json config;
+        try {
+            config_file >> config;
+            endpoint = config.value("local_endpoint", endpoint);
+        } catch (...) {}
+        config_file.close();
+    }
+
+    // Prepare JSON payload for llama.cpp server format
+    json payload = {
+        {"prompt", prompt},
+        {"n_predict", 512},
+        {"temperature", 0.7},
+        {"stop", json::array({"```", "\n\n\n"})},
+        {"stream", false}
+    };
+
+    string json_str = payload.dump();
+
+    struct curl_slist *headers = NULL;
+    headers = curl_slist_append(headers, "Content-Type: application/json");
+
+    curl_easy_setopt(curl, CURLOPT_URL, endpoint.c_str());
+    curl_easy_setopt(curl, CURLOPT_POSTFIELDS, json_str.c_str());
+    curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
+    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
+    curl_easy_setopt(curl, CURLOPT_WRITEDATA, &readBuffer);
+    curl_easy_setopt(curl, CURLOPT_TIMEOUT, 30L);
+
+    res = curl_easy_perform(curl);
+
+    curl_slist_free_all(headers);
+    curl_easy_cleanup(curl);
+
+    if (res != CURLE_OK) {
+        return "Error: " + string(curl_easy_strerror(res));
+    }
+
+    // Parse response from llama.cpp server
+    try {
+        json response = json::parse(readBuffer);
+        if (response.contains("content")) {
+            return response["content"].get<string>();
+        }
+    } catch (...) {
+        return "Error parsing local model response";
+    }
+
+    return readBuffer;
+}
+
 string call_gemini_api(const string &prompt, const string &api_key) {
     CURL *curl;
     CURLcode res;
@@ -137,8 +220,7 @@ string build_ai_prompt(const string &userInput, const string &currentUsername, c
     prompt << "7. cd group_name/subgroup - navigate to a subgroup\n";
     prompt << "8. ls - list available groups and subgroups\n";
     prompt << "9. rm event_id - delete an event by ID\n";
-    prompt << "10. dates - show stored dates from recent searches\n";
-    prompt << "11. test -n \"string\" - test if string is not empty (for conditionals)\n\n";
+    prompt << "10. test -n \"string\" - test if string is not empty (for conditionals)\n\n";
 
     prompt << "Bash-like operators (can be combined):\n";
     prompt << "- cmd1 && cmd2 - execute cmd2 only if cmd1 succeeds\n";
@@ -171,13 +253,7 @@ string build_ai_prompt(const string &userInput, const string &currentUsername, c
 }
 
 string process_ai_command(const string &userInput, const string &currentUsername, string &currentgroup) {
-    string api_key = get_gemini_api_key();
-
-    if (api_key.empty()) {
-        return "Error: Gemini API key not found.\n"
-               "Set GEMINI_API_KEY environment variable or create .gemini_config file with your API key.\n"
-               "Get your API key from: https://makersuite.google.com/app/apikey\n";
-    }
+    string model_type = get_ai_model_type();
 
     stringstream output;
     output << "AI: Processing request...\n";
@@ -185,8 +261,21 @@ string process_ai_command(const string &userInput, const string &currentUsername
     // Build the prompt
     string prompt = build_ai_prompt(userInput, currentUsername, currentgroup);
 
-    // Call Gemini API
-    string response = call_gemini_api(prompt, api_key);
+    string response;
+    if (model_type == "qwen" || model_type == "local") {
+        // Use local Qwen model
+        response = call_local_qwen(prompt);
+    } else {
+        // Use Gemini API
+        string api_key = get_gemini_api_key();
+        if (api_key.empty()) {
+            return "Error: Gemini API key not found.\n"
+                   "Set GEMINI_API_KEY environment variable or create .gemini_config file with your API key.\n"
+                   "Get your API key from: https://makersuite.google.com/app/apikey\n"
+                   "Or switch to local Qwen model in .ai_config\n";
+        }
+        response = call_gemini_api(prompt, api_key);
+    }
 
     // Extract command from response
     string command = extract_command_from_response(response);

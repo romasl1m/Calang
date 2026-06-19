@@ -1,0 +1,6 @@
+{
+  "model_type": "qwen",
+  "model_name": "qwen3:4b",
+  "local_endpoint": "http://localhost:11434/api/generate",
+  "comment": "model_type can be 'gemini' or 'qwen'. For qwen/local models, make sure Ollama is running with the model specified in model_name. Use 'ollama list' to see available models."
+}

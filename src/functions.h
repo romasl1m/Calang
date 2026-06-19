@@ -11,8 +11,8 @@ string urlDecode(string str);
 string loadHtmlTemplate(const string &filePath);
 
 void delete_event(const string &id, const string &user, const string &origin, bool delete_all = false);
-void add_new_event(const std::string &title, const std::string &id, const std::string &start, const std::string &end, const std::string &user, const std::string &description, const std::string &origin, const std::string &recurrence, const std::string &recurrence_id = "", const std::string &priority = "medium", const std::string &subgroup = "");
-void edit_event(const std::string &title, const std::string &id, const std::string &start, const std::string &end, const std::string &user, const std::string &description, const std::string &origin, const std::string &recurrence, bool edit_all, const std::string &priority = "medium", const std::string &subgroup = "");
+void add_new_event(const std::string &title, const std::string &id, const std::string &start, const std::string &end, const std::string &user, const std::string &description, const std::string &origin, const std::string &recurrence, const std::string &recurrence_id = "", const std::string &recurrence_end = "", const std::string &priority = "medium", const std::string &subgroup = "");
+void edit_event(const std::string &title, const std::string &id, const std::string &start, const std::string &end, const std::string &user, const std::string &description, const std::string &origin, const std::string &recurrence, bool edit_all, const std::string &recurrence_end = "", const std::string &priority = "medium", const std::string &subgroup = "");
 bool change_event_group(const std::string &event_id, const std::string &new_origin);
 vector<Event> get_user_event(const string &username);
 vector<Event> get_all_events(const string &username);

@@ -59,9 +59,6 @@ string parseAndFormatDateTime(const string &dateStr, const string &timeStr) {
     return dateStr + " " + timeStr;
 }
 
-// Vector to store dates from searches for AI to reference
-static vector<string> DATE_VECTOR;
-
 // Helper function to execute a single command
 string execute_single_command(const string &cmd_line, const string &currentUsername, string &currentgroup);
 
@@ -166,40 +163,7 @@ string execute_single_command(const string &fullLine, const string &currentUsern
     if (fullLine.empty())
         return "";
 
-    // Replace $DATE[n] with stored dates from vector
-    string processedLine = fullLine;
-    size_t pos = 0;
-    while ((pos = processedLine.find("$DATE", pos)) != string::npos) {
-        // Check if there's a bracket like $DATE[0]
-        if (pos + 5 < processedLine.length() && processedLine[pos + 5] == '[') {
-            size_t endBracket = processedLine.find(']', pos + 6);
-            if (endBracket != string::npos) {
-                string indexStr = processedLine.substr(pos + 6, endBracket - pos - 6);
-                try {
-                    int index = stoi(indexStr);
-                    if (index >= 0 && index < (int)DATE_VECTOR.size()) {
-                        processedLine.replace(pos, endBracket - pos + 1, DATE_VECTOR[index]);
-                    } else {
-                        processedLine.replace(pos, endBracket - pos + 1, getCurrentYear() + "-01-01");
-                    }
-                } catch (...) {
-                    processedLine.replace(pos, endBracket - pos + 1, getCurrentYear() + "-01-01");
-                }
-                pos += 10; // Move past the replacement
-                continue;
-            }
-        }
-        // $DATE without bracket - use first date if available
-        if (!DATE_VECTOR.empty()) {
-            processedLine.replace(pos, 5, DATE_VECTOR[0]);
-            pos += DATE_VECTOR[0].length();
-        } else {
-            processedLine.replace(pos, 5, getCurrentYear() + "-01-01");
-            pos += 10;
-        }
-    }
-
-    stringstream ss(processedLine);
+    stringstream ss(fullLine);
     string cmd;
     ss >> cmd;
 
@@ -207,16 +171,6 @@ string execute_single_command(const string &fullLine, const string &currentUsern
 
     if (cmd == "clear") {
         return "CLEAR_SIGNAL";
-    } else if (cmd == "dates") {
-        output << "Stored dates in $DATE vector:\n";
-        if (DATE_VECTOR.empty()) {
-            output << "  (empty - use cat or grep to populate)\n";
-        } else {
-            for (size_t i = 0; i < DATE_VECTOR.size(); i++) {
-                output << "  [" << i << "] " << DATE_VECTOR[i] << "\n";
-            }
-            output << "\nUse $DATE or $DATE[n] in commands\n";
-        }
     } else if (cmd == "whoami") {
         output << currentUsername << "\n";
     } else if (cmd == "sync") {
@@ -240,11 +194,9 @@ string execute_single_command(const string &fullLine, const string &currentUsern
                << "  ls - list available groups and subgroups\n"
                << "  clear\n"
                << "  whoami\n"
-               << "  dates - show stored dates from recent searches\n"
                << "  sync - import events from Google Calendar\n"
                << "  ai \"natural language request\" - use AI to execute commands\n"
                << "  rm <event_id> - delete an event\n"
-               << "  $DATE or $DATE[n] - use stored dates in commands (0=first)\n"
                << "\nBash-like operators:\n"
                << "  cmd1 && cmd2 - execute cmd2 only if cmd1 succeeds\n"
                << "  cmd1 || cmd2 - execute cmd2 only if cmd1 fails\n"
@@ -285,8 +237,6 @@ string execute_single_command(const string &fullLine, const string &currentUsern
             int limit = min(count, (int)upcomingEvents.size());
             output << "--- Next " << limit << " events ---\n";
 
-            // Clear and populate date vector
-            DATE_VECTOR.clear();
             for (int i = 0; i < limit; i++) {
                 const Event &evt = upcomingEvents[i];
                 output << "ID: " << evt.id << "\n"
@@ -298,13 +248,6 @@ string execute_single_command(const string &fullLine, const string &currentUsern
                     output << "  Subgroup: " << evt.subgroup << "\n";
                 }
                 output << "\n";
-
-                // Add each event's date to the vector
-                DATE_VECTOR.push_back(evt.start.substr(0, 10)); // Extract YYYY-MM-DD
-            }
-
-            if (limit > 0) {
-                output << "Stored " << DATE_VECTOR.size() << " date(s) in $DATE vector\n";
             }
         } else {
             // Original behavior - show events for specific date
@@ -325,8 +268,6 @@ string execute_single_command(const string &fullLine, const string &currentUsern
             if (dayEvents.empty()) {
                 output << "No events found.\n";
             } else {
-                // Clear and populate date vector with event dates
-                DATE_VECTOR.clear();
                 for (const auto &evt : dayEvents) {
                     output << "ID: " << evt.id << "\n"
                            << "  Title: " << evt.title << "\n"
@@ -337,15 +278,7 @@ string execute_single_command(const string &fullLine, const string &currentUsern
                         output << "  Subgroup: " << evt.subgroup << "\n";
                     }
                     output << "\n";
-
-                    // Add each unique date to vector
-                    string eventDate = evt.start.substr(0, 10);
-                    if (find(DATE_VECTOR.begin(), DATE_VECTOR.end(), eventDate) == DATE_VECTOR.end()) {
-                        DATE_VECTOR.push_back(eventDate);
-                    }
                 }
-
-                output << "Stored " << DATE_VECTOR.size() << " date(s) in $DATE vector\n";
             }
         }
     } else if (cmd == "grep") {
@@ -393,8 +326,6 @@ string execute_single_command(const string &fullLine, const string &currentUsern
             sort(matchedEvents.begin(), matchedEvents.end(),
                  [](const Event &a, const Event &b) { return a.start < b.start; });
 
-            // Clear and populate date vector with matched event dates
-            DATE_VECTOR.clear();
             for (const auto &evt : matchedEvents) {
                 output << "ID: " << evt.id << "\n"
                        << "  Title: " << evt.title << "\n"
@@ -405,15 +336,7 @@ string execute_single_command(const string &fullLine, const string &currentUsern
                     output << "  Subgroup: " << evt.subgroup << "\n";
                 }
                 output << "\n";
-
-                // Add each unique date to vector
-                string eventDate = evt.start.substr(0, 10);
-                if (find(DATE_VECTOR.begin(), DATE_VECTOR.end(), eventDate) == DATE_VECTOR.end()) {
-                    DATE_VECTOR.push_back(eventDate);
-                }
             }
-
-            output << "Stored " << DATE_VECTOR.size() << " date(s) in $DATE vector\n";
         }
     } else if (cmd == "touch") {
         string remaining;
@@ -427,6 +350,7 @@ string execute_single_command(const string &fullLine, const string &currentUsern
 
         string title, start, end, desc;
         string recurrence = "none";
+        string recurrence_end = "";
         string priority = "medium";
 
         // Parse currentgroup to separate group_id and subgroup path
@@ -480,11 +404,13 @@ string execute_single_command(const string &fullLine, const string &currentUsern
                 for (size_t i = 7; i < args.size(); i++) {
                     if (args[i].rfind("T=", 0) == 0) {
                         recurrence = args[i].substr(2);
+                    } else if (args[i].rfind("R=", 0) == 0) {
+                        recurrence_end = args[i].substr(2);
                     } else if (args[i].rfind("P=", 0) == 0) {
                         priority = args[i].substr(2);
                     } else if (args[i].rfind("S=", 0) == 0) {
                         subgroup = args[i].substr(2);
-                    } else if (args[i].rfind("O=", 0) == 0) { // Pozwala AI nadpisać grupę 'cd'
+                    } else if (args[i].rfind("O=", 0) == 0) {
                         origin = args[i].substr(2);
                     }
                 }
@@ -501,6 +427,8 @@ string execute_single_command(const string &fullLine, const string &currentUsern
             for (size_t i = 4; i < args.size(); i++) {
                 if (args[i].rfind("T=", 0) == 0) {
                     recurrence = args[i].substr(2);
+                } else if (args[i].rfind("R=", 0) == 0) {
+                    recurrence_end = args[i].substr(2);
                 } else if (args[i].rfind("P=", 0) == 0) {
                     priority = args[i].substr(2);
                 } else if (args[i].rfind("S=", 0) == 0) {
@@ -517,6 +445,8 @@ string execute_single_command(const string &fullLine, const string &currentUsern
             for (size_t i = 5; i < args.size(); i++) {
                 if (args[i].rfind("T=", 0) == 0) {
                     recurrence = args[i].substr(2);
+                } else if (args[i].rfind("R=", 0) == 0) {
+                    recurrence_end = args[i].substr(2);
                 } else if (args[i].rfind("P=", 0) == 0) {
                     priority = args[i].substr(2);
                 } else if (args[i].rfind("S=", 0) == 0) {
@@ -527,9 +457,9 @@ string execute_single_command(const string &fullLine, const string &currentUsern
             }
         } else {
             output << "Syntax error. Correct usage:\n"
-                   << "  AI format: touch \"title\" \"YYYY-MM-DD HH:MM\" \"YYYY-MM-DD HH:MM\" \"description\" [P=priority] [T=recurrence] [O=origin]\n"
-                   << "  Manual format: touch \"title\" DD.MM HH:MM HH:MM \"description\" [P=priority] [T=recurrence] [O=origin]\n"
-                   << "  Length format: touch \"title\" in DD.MM HH:MM length HH:MM \"description\" [P=priority] [T=recurrence] [O=origin]\n";
+                   << "  AI format: touch \"title\" \"YYYY-MM-DD HH:MM\" \"YYYY-MM-DD HH:MM\" \"description\" [P=priority] [T=recurrence] [R=YYYY-MM-DD] [O=origin]\n"
+                   << "  Manual format: touch \"title\" DD.MM HH:MM HH:MM \"description\" [P=priority] [T=recurrence] [R=YYYY-MM-DD] [O=origin]\n"
+                   << "  Length format: touch \"title\" in DD.MM HH:MM length HH:MM \"description\" [P=priority] [T=recurrence] [R=YYYY-MM-DD] [O=origin]\n";
             return output.str();
         }
 
@@ -558,7 +488,7 @@ string execute_single_command(const string &fullLine, const string &currentUsern
 
         string id = to_string(time(0)) + "_" + to_string(rand() % 1000);
 
-        add_new_event(title, id, start, end, currentUsername, desc, resolved_origin, recurrence, "", priority, subgroup);
+        add_new_event(title, id, start, end, currentUsername, desc, resolved_origin, recurrence, "", recurrence_end, priority, subgroup);
 
         // Try to create event in Google Calendar if user has access token
         string access_token = get_user_access_token(currentUsername);

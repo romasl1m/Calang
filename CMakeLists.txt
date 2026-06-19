@@ -28,3 +28,12 @@ target_include_directories(calang PRIVATE
 )
 
 target_link_libraries(calang pthread curl)
+
+# Create symlinks to required directories in the build directory
+add_custom_command(TARGET calang POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E create_symlink ${CMAKE_SOURCE_DIR}/templates ${CMAKE_BINARY_DIR}/templates
+    COMMAND ${CMAKE_COMMAND} -E create_symlink ${CMAKE_SOURCE_DIR}/users ${CMAKE_BINARY_DIR}/users
+    COMMAND ${CMAKE_COMMAND} -E create_symlink ${CMAKE_SOURCE_DIR}/groups ${CMAKE_BINARY_DIR}/groups
+    COMMAND ${CMAKE_COMMAND} -E create_symlink ${CMAKE_SOURCE_DIR}/static ${CMAKE_BINARY_DIR}/static
+    COMMENT "Creating symlinks to resource directories"
+)

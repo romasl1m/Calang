@@ -1,0 +1,4 @@
+{
+    "local_endpoint": "http://localhost:11434/api/generate",
+    "model_type": "qwen"
+}

@@ -88,7 +88,7 @@ void join_group(const string &username, const string &group_id) {
     fout << members.dump(4);
 }
 
-void add_new_event(const string &title, const string &id, const string &start, const string &end, const string &user, const string &description, const string &origin, const string &recurrence, const string &recurrence_id, const string &priority, const string &subgroup) {
+void add_new_event(const string &title, const string &id, const string &start, const string &end, const string &user, const string &description, const string &origin, const string &recurrence, const string &recurrence_id, const string &recurrence_end, const string &priority, const string &subgroup) {
     string path = (origin == "private") ? "users/" + user + "/events.json" : "groups/" + origin + "/events.json";
 
     filesystem::path p(path);
@@ -103,6 +103,20 @@ void add_new_event(const string &title, const string &id, const string &start, c
     }
     if (not data.is_array())
         data = json::array();
+
+    // Parse recurrence_end date if provided
+    time_t recurrence_end_time = 0;
+    if (!recurrence_end.empty() && recurrence != "none") {
+        struct tm tm_rec_end = {0};
+        if (sscanf(recurrence_end.c_str(), "%d-%d-%d", &tm_rec_end.tm_year, &tm_rec_end.tm_mon, &tm_rec_end.tm_mday) == 3) {
+            tm_rec_end.tm_year -= 1900;
+            tm_rec_end.tm_mon -= 1;
+            tm_rec_end.tm_hour = 23;
+            tm_rec_end.tm_min = 59;
+            tm_rec_end.tm_isdst = -1;
+            recurrence_end_time = mktime(&tm_rec_end);
+        }
+    }
 
     int occurrences = 1;
     if (recurrence == "daily")
@@ -153,6 +167,11 @@ void add_new_event(const string &title, const string &id, const string &start, c
         time_t t_s = mktime(&tm_start);
         time_t t_e = mktime(&tm_end);
 
+        // Check if this occurrence exceeds recurrence_end
+        if (recurrence_end_time > 0 && t_s > recurrence_end_time) {
+            break; // Stop creating occurrences beyond recurrence_end
+        }
+
         char buf_s[64], buf_e[64];
         struct tm *format_s = localtime(&t_s);
         if (start.find('T') != string::npos)
@@ -182,6 +201,7 @@ void add_new_event(const string &title, const string &id, const string &start, c
             {"origin", origin},
             {"recurrence", recurrence},
             {"recurrence_id", rec_id},
+            {"recurrence_end", recurrence_end},
             {"priority", priority},
             {"subgroup", subgroup}};
         data.push_back(new_ev);
@@ -224,7 +244,7 @@ void delete_event(const string &id, const string &user, const string &origin, bo
     fout << filtered.dump(4);
     fout.close();
 }
-void edit_event(const string &title, const string &id, const string &start, const string &end, const string &user, const string &description, const string &origin, const string &recurrence, bool edit_all, const string &priority, const string &subgroup) {
+void edit_event(const string &title, const string &id, const string &start, const string &end, const string &user, const string &description, const string &origin, const string &recurrence, bool edit_all, const string &recurrence_end, const string &priority, const string &subgroup) {
     string path = (origin == "private") ? "users/" + user + "/events.json" : "groups/" + origin + "/events.json";
     if (not filesystem::exists(path))
         return;
@@ -262,7 +282,7 @@ void edit_event(const string &title, const string &id, const string &start, cons
         fout.close();
 
         string new_base_id = to_string(time(0)) + "_" + to_string(rand() % 1000);
-        add_new_event(title, new_base_id, start, end, user, description, origin, recurrence, "", priority, subgroup);
+        add_new_event(title, new_base_id, start, end, user, description, origin, recurrence, "", recurrence_end, priority, subgroup);
         return;
     }
 
@@ -274,6 +294,7 @@ void edit_event(const string &title, const string &id, const string &start, cons
             item["end"] = end;
             item["description"] = description;
             item["recurrence"] = recurrence;
+            item["recurrence_end"] = recurrence_end;
             item["priority"] = priority;
             item["subgroup"] = subgroup;
             updated = true;

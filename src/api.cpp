@@ -40,6 +40,7 @@ void api_routes(crow::SimpleApp &app) {
         string recurrence = urlDecode(getParam(req.body, "recurrence"));
         if (recurrence.empty())
             recurrence = "none";
+        string recurrence_end = urlDecode(getParam(req.body, "recurrence_end"));
         string priority = urlDecode(getParam(req.body, "priority"));
         if (priority.empty())
             priority = "medium";
@@ -54,7 +55,7 @@ void api_routes(crow::SimpleApp &app) {
         }
 
         string subgroup = urlDecode(getParam(req.body, "subgroup"));
-        add_new_event(title, id, start, end, user, description, origin, recurrence, "", priority, subgroup);
+        add_new_event(title, id, start, end, user, description, origin, recurrence, "", recurrence_end, priority, subgroup);
 
         // Try to create event in Google Calendar if user has access token
         string access_token = get_user_access_token(user);
@@ -114,6 +115,7 @@ void api_routes(crow::SimpleApp &app) {
         string recurrence = urlDecode(getParam(req.body, "recurrence"));
         if (recurrence.empty())
             recurrence = "none";
+        string recurrence_end = urlDecode(getParam(req.body, "recurrence_end"));
         string priority = urlDecode(getParam(req.body, "priority"));
         if (priority.empty())
             priority = "medium";
@@ -124,7 +126,7 @@ void api_routes(crow::SimpleApp &app) {
         if (user.empty())
             return crow::response(401, "Nie zalogowano");
 
-        edit_event(title, id, start, end, user, description, origin, recurrence, edit_all, priority, subgroup);
+        edit_event(title, id, start, end, user, description, origin, recurrence, edit_all, recurrence_end, priority, subgroup);
 
         crow::response res;
         res.code = 302;
@@ -746,168 +748,174 @@ void api_routes(crow::SimpleApp &app) {
                 return res;
             }
 
-            // Check if AI needs to execute a command
-            bool shouldExecuteCommand = false;
-            string commandToExecute = "";
-
-            // First, check if the message is asking for information that requires a command
-            vector<string> infoKeywords = {"show", "find", "list", "what", "when", "get", "search", "next", "upcoming"};
-            string lowerMessage = message;
-            transform(lowerMessage.begin(), lowerMessage.end(), lowerMessage.begin(), ::tolower);
-
-            for (const auto &keyword : infoKeywords) {
-                if (lowerMessage.find(keyword) != string::npos) {
-                    shouldExecuteCommand = true;
-                    break;
-                }
+            // Read AI configuration
+            string model_type = "gemini";
+            string local_endpoint = "http://localhost:8080/completion";
+            string model_name = "qwen3:4b";
+            ifstream config_file(".ai_config");
+            if (config_file.is_open()) {
+                try {
+                    json config;
+                    config_file >> config;
+                    model_type = config.value("model_type", "gemini");
+                    local_endpoint = config.value("local_endpoint", local_endpoint);
+                    model_name = config.value("model_name", model_name);
+                } catch (...) {}
+                config_file.close();
             }
 
-            // If AI should get information, generate and execute a command
-            json commandExecutions = json::array();
-            if (shouldExecuteCommand && !user.empty()) {
-                // Generate a command using AI
-                string cmdPrompt = "Based on this user request, generate the appropriate terminal command: " + message;
-
-                string cmdUrl = "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent";
-                json cmd_request;
-                string cmd_sys = "Create a single Linux/Bash terminal command for the following request. Return ONLY the command as plain text. Do not use markdown, no explanations, no comments. The available commands are:\n\n"
-                                 "- cat YYYY-MM-DD : show events for a specific date\n"
-                                 "- cat N : show next N events and store dates in vector\n"
-                                 "- grep \"text\" : find events containing text in title or description\n"
-                                 "- touch \"event name\" DD.MM HH:MM HH:MM \"description\" [P=priority] [T=recurrence] [S=subgroup] [O=origin]\n"
-                                 "- dates : show stored dates from searches\n"
-                                 "- $DATE or $DATE[n] : use stored dates in commands (n=index)\n\n"
-                                 "Request: " +
-                                 message;
-
-                cmd_request["contents"][0]["parts"][0]["text"] = cmd_sys;
-                string cmd_request_data = cmd_request.dump();
-                string cmd_response_data;
-
-                CURL *cmd_curl = curl_easy_init();
-                if (cmd_curl) {
-                    struct curl_slist *cmd_headers = nullptr;
-                    cmd_headers = curl_slist_append(cmd_headers, "Content-Type: application/json");
-                    cmd_headers = curl_slist_append(cmd_headers, ("X-goog-api-key: " + api_key).c_str());
-
-                    curl_easy_setopt(cmd_curl, CURLOPT_URL, cmdUrl.c_str());
-                    curl_easy_setopt(cmd_curl, CURLOPT_POST, 1L);
-                    curl_easy_setopt(cmd_curl, CURLOPT_POSTFIELDS, cmd_request_data.c_str());
-                    curl_easy_setopt(cmd_curl, CURLOPT_POSTFIELDSIZE, cmd_request_data.size());
-                    curl_easy_setopt(cmd_curl, CURLOPT_HTTPHEADER, cmd_headers);
-                    curl_easy_setopt(cmd_curl, CURLOPT_WRITEFUNCTION, WriteCallback);
-                    curl_easy_setopt(cmd_curl, CURLOPT_WRITEDATA, &cmd_response_data);
-
-                    CURLcode cmd_res = curl_easy_perform(cmd_curl);
-                    curl_easy_cleanup(cmd_curl);
-                    curl_slist_free_all(cmd_headers);
-
-                    if (cmd_res == CURLE_OK) {
-                        try {
-                            json cmd_json = json::parse(cmd_response_data);
-                            if (!cmd_json.contains("error")) {
-                                commandToExecute = cmd_json["candidates"][0]["content"]["parts"][0]["text"];
-                                if (!commandToExecute.empty() && commandToExecute.back() == '\n') {
-                                    commandToExecute.pop_back();
-                                }
-
-                                // Execute the command
-                                string commandOutput = process_terminal_command(commandToExecute, user, currentgroup);
-                                commandExecutions.push_back({{"command", commandToExecute}, {"output", commandOutput}});
-                            }
-                        } catch (...) {
-                        }
-                    }
-                }
-            }
-
-            string url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent";
-
-            json gemini_request;
-            json &contents = gemini_request["contents"];
-
+            // Build conversation prompt
             string system_context = "You are a helpful AI assistant for a calendar app called Calang. "
                                     "Be concise, friendly, and helpful. Keep responses under 200 characters when possible. "
-                                    "You can help with: general questions, calendar tips, explaining features, and casual conversation. "
-                                    "You can execute terminal commands to get information about events. When you execute a command, its output will be provided to you.";
+                                    "You can help with: general questions, calendar tips, explaining features, and casual conversation.";
 
-            contents = json::array();
-            contents.push_back({{"role", "user"},
-                                {"parts", {{{"text", system_context}}}}});
+            string full_prompt = system_context + "\n\n";
 
+            // Add history
             for (const auto &msg : history) {
                 string role = msg["role"].get<string>();
                 string content = msg["content"].get<string>();
-
                 if (role == "user") {
-                    contents.push_back({{"role", "user"},
-                                        {"parts", {{{"text", content}}}}});
+                    full_prompt += "User: " + content + "\n";
                 } else if (role == "assistant") {
-                    contents.push_back({{"role", "model"},
-                                        {"parts", {{{"text", content}}}}});
+                    full_prompt += "Assistant: " + content + "\n";
                 }
             }
 
-            // Add command execution results to the context if any
-            string finalMessage = message;
-            if (!commandExecutions.empty()) {
-                finalMessage += "\n\n[System: I executed these commands for you]\n";
-                for (const auto &exec : commandExecutions) {
-                    finalMessage += "Command: " + exec["command"].get<string>() + "\n";
-                    finalMessage += "Output:\n" + exec["output"].get<string>() + "\n\n";
+            full_prompt += "User: " + message + "\nAssistant: ";
+
+            string ai_response;
+
+            if (model_type == "qwen" || model_type == "local") {
+                // Use local Qwen/Ollama model
+                json qwen_request = {
+                    {"model", model_name},
+                    {"prompt", full_prompt},
+                    {"stream", false},
+                    {"options", {
+                        {"temperature", 0.7},
+                        {"num_predict", 512}
+                    }}
+                };
+
+                string request_data = qwen_request.dump();
+                string response_data;
+
+                CURL *curl = curl_easy_init();
+                if (curl) {
+                    struct curl_slist *headers = nullptr;
+                    headers = curl_slist_append(headers, "Content-Type: application/json");
+
+                    curl_easy_setopt(curl, CURLOPT_URL, local_endpoint.c_str());
+                    curl_easy_setopt(curl, CURLOPT_POST, 1L);
+                    curl_easy_setopt(curl, CURLOPT_POSTFIELDS, request_data.c_str());
+                    curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, request_data.size());
+                    curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
+                    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
+                    curl_easy_setopt(curl, CURLOPT_WRITEDATA, &response_data);
+                    curl_easy_setopt(curl, CURLOPT_TIMEOUT, 30L);
+
+                    CURLcode cres = curl_easy_perform(curl);
+                    curl_easy_cleanup(curl);
+                    curl_slist_free_all(headers);
+
+                    if (cres != CURLE_OK) {
+                        res.code = 500;
+                        res.body = json({{"error", "Failed to contact local AI model: " + string(curl_easy_strerror(cres))}}).dump();
+                        return res;
+                    }
                 }
-            }
 
-            contents.push_back({{"role", "user"},
-                                {"parts", {{{"text", finalMessage}}}}});
-
-            string request_data = gemini_request.dump();
-            string response_data;
-
-            CURL *curl = curl_easy_init();
-            if (curl) {
-                struct curl_slist *headers = nullptr;
-                headers = curl_slist_append(headers, "Content-Type: application/json");
-                headers = curl_slist_append(headers, ("X-goog-api-key: " + api_key).c_str());
-
-                curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
-                curl_easy_setopt(curl, CURLOPT_POST, 1L);
-                curl_easy_setopt(curl, CURLOPT_POSTFIELDS, request_data.c_str());
-                curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, request_data.size());
-                curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
-                curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
-                curl_easy_setopt(curl, CURLOPT_WRITEDATA, &response_data);
-
-                CURLcode cres = curl_easy_perform(curl);
-                curl_easy_cleanup(curl);
-                curl_slist_free_all(headers);
-
-                if (cres != CURLE_OK) {
+                // Parse Ollama response
+                try {
+                    json qwen_response = json::parse(response_data);
+                    if (qwen_response.contains("response")) {
+                        ai_response = qwen_response["response"].get<string>();
+                    } else if (qwen_response.contains("error")) {
+                        res.code = 500;
+                        res.body = json({{"error", "Local AI Error: " + qwen_response["error"].get<string>()}}).dump();
+                        return res;
+                    } else {
+                        res.code = 500;
+                        res.body = json({{"error", "Unexpected response format from local AI"}}).dump();
+                        return res;
+                    }
+                } catch (const exception &e) {
                     res.code = 500;
-                    res.body = json({{"error", "Failed to contact AI API"}}).dump();
+                    res.body = json({{"error", "Failed to parse local AI response: " + string(e.what())}}).dump();
                     return res;
                 }
+            } else {
+                // Use Google Gemini API
+                string url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent";
+
+                json gemini_request;
+                json &contents = gemini_request["contents"];
+                contents = json::array();
+
+                contents.push_back({{"role", "user"},
+                                    {"parts", {{{"text", system_context}}}}});
+
+                for (const auto &msg : history) {
+                    string role = msg["role"].get<string>();
+                    string content = msg["content"].get<string>();
+
+                    if (role == "user") {
+                        contents.push_back({{"role", "user"},
+                                            {"parts", {{{"text", content}}}}});
+                    } else if (role == "assistant") {
+                        contents.push_back({{"role", "model"},
+                                            {"parts", {{{"text", content}}}}});
+                    }
+                }
+
+                contents.push_back({{"role", "user"},
+                                    {"parts", {{{"text", message}}}}});
+
+                string request_data = gemini_request.dump();
+                string response_data;
+
+                CURL *curl = curl_easy_init();
+                if (curl) {
+                    struct curl_slist *headers = nullptr;
+                    headers = curl_slist_append(headers, "Content-Type: application/json");
+                    headers = curl_slist_append(headers, ("X-goog-api-key: " + api_key).c_str());
+
+                    curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
+                    curl_easy_setopt(curl, CURLOPT_POST, 1L);
+                    curl_easy_setopt(curl, CURLOPT_POSTFIELDS, request_data.c_str());
+                    curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, request_data.size());
+                    curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
+                    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
+                    curl_easy_setopt(curl, CURLOPT_WRITEDATA, &response_data);
+
+                    CURLcode cres = curl_easy_perform(curl);
+                    curl_easy_cleanup(curl);
+                    curl_slist_free_all(headers);
+
+                    if (cres != CURLE_OK) {
+                        res.code = 500;
+                        res.body = json({{"error", "Failed to contact AI API"}}).dump();
+                        return res;
+                    }
+                }
+
+                json gemini_response = json::parse(response_data);
+
+                if (gemini_response.contains("error")) {
+                    res.code = 500;
+                    res.body = json({{"error", "AI API Error: " + gemini_response["error"]["message"].get<string>()}}).dump();
+                    return res;
+                }
+
+                ai_response = gemini_response["candidates"][0]["content"]["parts"][0]["text"];
             }
-
-            json gemini_response = json::parse(response_data);
-
-            if (gemini_response.contains("error")) {
-                res.code = 500;
-                res.body = json({{"error", "AI API Error: " + gemini_response["error"]["message"].get<string>()}}).dump();
-                return res;
-            }
-
-            string ai_response = gemini_response["candidates"][0]["content"]["parts"][0]["text"];
 
             if (!ai_response.empty() && ai_response.back() == '\n') {
                 ai_response.pop_back();
             }
 
-            // Also provide the generated command as a suggestion if we executed one
-            json response_json = {{"response", ai_response}, {"commands", commandExecutions}};
-            if (!commandToExecute.empty()) {
-                response_json["command"] = commandToExecute;
-            }
+            json response_json = {{"response", ai_response}};
 
             res.code = 200;
             res.body = response_json.dump();
@@ -919,5 +927,77 @@ void api_routes(crow::SimpleApp &app) {
             res.body = json({{"error", string(e.what())}}).dump();
             return res;
         }
+    });
+
+    CROW_ROUTE(app, "/api/get_ai_settings").methods("GET"_method)([](const crow::request &req) {
+        crow::response res;
+        res.add_header("Content-Type", "application/json");
+
+        string cookie_header = req.get_header_value("Cookie");
+        string user = get_logged_in_user(cookie_header);
+
+        if (user.empty()) {
+            res.code = 401;
+            res.body = json({{"error", "Unauthorized"}}).dump();
+            return res;
+        }
+
+        // Read AI config
+        json config = {
+            {"model_type", "gemini"},
+            {"local_endpoint", "http://localhost:8080/completion"}
+        };
+
+        ifstream config_file(".ai_config");
+        if (config_file.is_open()) {
+            try {
+                config_file >> config;
+            } catch (...) {}
+            config_file.close();
+        }
+
+        res.code = 200;
+        res.body = config.dump();
+        return res;
+    });
+
+    CROW_ROUTE(app, "/api/save_ai_settings").methods("POST"_method)([](const crow::request &req) {
+        crow::response res;
+        res.add_header("Content-Type", "application/json");
+
+        string cookie_header = req.get_header_value("Cookie");
+        string user = get_logged_in_user(cookie_header);
+
+        if (user.empty()) {
+            res.code = 401;
+            res.body = json({{"error", "Unauthorized"}}).dump();
+            return res;
+        }
+
+        string model_type = urlDecode(getParam(req.body, "model_type"));
+        string local_endpoint = urlDecode(getParam(req.body, "local_endpoint"));
+
+        if (model_type.empty()) {
+            model_type = "gemini";
+        }
+
+        json config = {
+            {"model_type", model_type},
+            {"local_endpoint", local_endpoint}
+        };
+
+        ofstream config_file(".ai_config");
+        if (config_file.is_open()) {
+            config_file << config.dump(4);
+            config_file.close();
+
+            res.code = 200;
+            res.body = json({{"success", true}}).dump();
+        } else {
+            res.code = 500;
+            res.body = json({{"error", "Failed to save settings"}}).dump();
+        }
+
+        return res;
     });
 }

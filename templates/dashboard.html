@@ -2051,6 +2051,7 @@
                     <span id="invites-count" style="position: absolute; top: -8px; right: -8px; background: var(--purple-primary); color: white; border-radius: 50%; width: 20px; height: 20px; font-size: 10px; display: flex; align-items: center; justify-content: center; font-weight: 700;">0</span>
                 </button>
                 <button class="logout-btn" style="border-color: var(--success); color: var(--success);" onclick="openJoinGroupModal()">🔗 Join Group</button>
+                <button class="logout-btn" style="border-color: var(--purple-primary); color: var(--purple-primary);" onclick="openAISettingsModal()">🤖 AI Settings</button>
                 <button class="logout-btn" style="border-color: var(--blue-primary); color: var(--blue-primary);" onclick="location.href='/profile'">Profile</button>
                 <button class="logout-btn" onclick="location.href='/logout'">Logout</button>
             </div>
@@ -2058,8 +2059,7 @@
 
         <div class="toolbar">
             <button class="tb-btn" onclick="openNewModal()">+ New event</button>
-            <button class="tb-btn" onclick="openNewGroupModal('group')" title="Create new group">+ New group</button>
-            <!-- <button class="tb-btn" onclick="openNewGroupModal('subgroup')" title="Create new subgroup">+ New subgroup</button> -->
+            <button class="tb-btn" id="groupButton" onclick="handleGroupButtonClick()" title="Create new group">+ New group</button>
             <button class="tb-btn term" onclick="toggleTerminal()">_ terminal</button>
             <button class="tb-btn term mobile-term-btn" onclick="toggleTerminal()" style="display:none;">⌘</button>
             <button class="tb-btn" onclick="syncGoogleCalendar()" title="Sync with Google Calendar" style="background: transparent; border-color: var(--success); color: var(--success);">Sync</button>
@@ -2283,6 +2283,39 @@
     </div>
 </div>
 
+<!-- ═══════════════════════ AI SETTINGS MODAL ═══════════════════════ -->
+<div id="aiSettingsModal" class="modal-overlay">
+    <div class="modal-box" style="max-width: 500px;">
+        <div class="modal-head">
+            <span>AI Settings</span>
+        </div>
+        <div class="modal-body" style="padding:20px;">
+            <div class="form-group">
+                <label>AI Model</label>
+                <select class="form-control" id="ai_model_type">
+                    <option value="gemini">Gemini API (cloud)</option>
+                    <option value="qwen">Qwen3 4B (local)</option>
+                </select>
+            </div>
+            <div class="form-group" id="ai_local_endpoint_wrapper" style="display:none; margin-top:12px;">
+                <label>Local Model Endpoint</label>
+                <input type="text" class="form-control" id="ai_local_endpoint" value="http://localhost:8080/completion" placeholder="http://localhost:8080/completion">
+                <div style="font-size:11px; color:var(--text-dim); margin-top:4px;">
+                    Make sure llama.cpp server is running with Qwen3-4B model
+                </div>
+            </div>
+            <div style="margin-top:16px; padding:12px; background:rgba(139, 92, 246, 0.1); border:1px solid rgba(139, 92, 246, 0.3); border-radius:8px; font-size:12px; color:var(--text-mid);">
+                <strong>Note:</strong> For Qwen3 4B local model, you need to have llama.cpp server running.
+                Run: <code style="background:rgba(0,0,0,0.3); padding:2px 6px; border-radius:4px;">./server -m qwen3-4b.gguf</code>
+            </div>
+        </div>
+        <div class="modal-foot">
+            <button type="button" class="btn btn-ghost" onclick="closeAISettingsModal()">Cancel</button>
+            <button type="button" class="btn btn-primary" onclick="saveAISettings()">Save</button>
+        </div>
+    </div>
+</div>
+
 <!-- ═══════════════════════ JOIN GROUP MODAL ═══════════════════════ -->
 <div id="joinGroupModal" class="modal-overlay">
     <div class="modal-box">
@@ -2420,13 +2453,17 @@
                             <option value="high">High</option>
                         </select>
                         <label style="margin-top:10px;">Recurrence</label>
-                        <select class="form-control" name="recurrence" id="n_recurrence">
+                        <select class="form-control" name="recurrence" id="n_recurrence" onchange="toggleRecurrenceEnd('n_recurrence_end_wrapper', this.value)">
                             <option value="none">None (one-time)</option>
                             <option value="daily">Daily</option>
                             <option value="weekly">Weekly</option>
                             <option value="monthly">Monthly</option>
                             <option value="yearly">Yearly</option>
                         </select>
+                        <div id="n_recurrence_end_wrapper" style="display:none; margin-top:10px;">
+                            <label>Recurrence end date (optional)</label>
+                            <input type="date" class="form-control" name="recurrence_end" id="n_recurrence_end" placeholder="YYYY-MM-DD">
+                        </div>
                     </div>
                 </div>
             </div>
@@ -2539,13 +2576,17 @@
                     <div class="adv-toggle" onclick="toggleAdvanced('e_adv_panel')">▶ Advanced</div>
                     <div id="e_adv_panel" class="adv-panel" style="width:100%;">
                         <label>Recurrence</label>
-                        <select class="form-control" name="recurrence" id="e_recurrence">
+                        <select class="form-control" name="recurrence" id="e_recurrence" onchange="toggleRecurrenceEnd('e_recurrence_end_wrapper', this.value)">
                             <option value="none">None (one-time)</option>
                             <option value="daily">Daily</option>
                             <option value="weekly">Weekly</option>
                             <option value="monthly">Monthly</option>
                             <option value="yearly">Yearly</option>
                         </select>
+                        <div id="e_recurrence_end_wrapper" style="display:none; margin-top:10px;">
+                            <label>Recurrence end date (optional)</label>
+                            <input type="date" class="form-control" name="recurrence_end" id="e_recurrence_end" placeholder="YYYY-MM-DD">
+                        </div>
                     </div>
                 </div>
             </div>
@@ -2953,6 +2994,9 @@ function loadGroups() {
                 }
             });
         }
+
+        // Update group button after loading groups
+        updateGroupButton();
     })
     .catch(() => {
         document.getElementById('groups-list').innerHTML = '<li class="group-empty">Error loading</li>';
@@ -2969,6 +3013,33 @@ function quickJoinGroup() {
     }
     joinGroupWithId(id);
     input.value = '';
+}
+
+function updateGroupButton() {
+    const params = new URLSearchParams(window.location.search);
+    const view = params.get('view') || 'all';
+    const button = document.getElementById('groupButton');
+
+    if (view === 'all' || view === 'private') {
+        button.textContent = '+ New group';
+        button.title = 'Create new group';
+        button.onclick = () => openNewGroupModal('group');
+    } else {
+        button.textContent = '+ Add new subgroup';
+        button.title = 'Add new subgroup to current group';
+        button.onclick = () => addSubgroupToCurrentGroup();
+    }
+}
+
+function handleGroupButtonClick() {
+    const params = new URLSearchParams(window.location.search);
+    const view = params.get('view') || 'all';
+
+    if (view === 'all' || view === 'private') {
+        openNewGroupModal('group');
+    } else {
+        addSubgroupToCurrentGroup();
+    }
 }
 
 function openNewGroupModal(defaultType = 'group') {
@@ -3276,6 +3347,61 @@ function copyQRLink() {
         const btn = event.target;
         btn.textContent = '✓ Copied!';
         setTimeout(() => { btn.textContent = 'Copy Link'; }, 1500);
+    });
+}
+
+function openAISettingsModal() {
+    // Load current AI settings
+    fetch('/api/get_ai_settings')
+        .then(r => r.json())
+        .then(settings => {
+            document.getElementById('ai_model_type').value = settings.model_type || 'gemini';
+            document.getElementById('ai_local_endpoint').value = settings.local_endpoint || 'http://localhost:8080/completion';
+            toggleAIEndpointField(settings.model_type || 'gemini');
+        })
+        .catch(() => {
+            document.getElementById('ai_model_type').value = 'gemini';
+            toggleAIEndpointField('gemini');
+        });
+
+    document.getElementById('aiSettingsModal').style.display = 'flex';
+
+    // Add change listener
+    document.getElementById('ai_model_type').onchange = function() {
+        toggleAIEndpointField(this.value);
+    };
+}
+
+function closeAISettingsModal() {
+    document.getElementById('aiSettingsModal').style.display = 'none';
+}
+
+function toggleAIEndpointField(modelType) {
+    const wrapper = document.getElementById('ai_local_endpoint_wrapper');
+    wrapper.style.display = (modelType === 'qwen' || modelType === 'local') ? 'block' : 'none';
+}
+
+function saveAISettings() {
+    const modelType = document.getElementById('ai_model_type').value;
+    const localEndpoint = document.getElementById('ai_local_endpoint').value;
+
+    fetch('/api/save_ai_settings', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+        body: 'model_type=' + encodeURIComponent(modelType) +
+              '&local_endpoint=' + encodeURIComponent(localEndpoint)
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            alert('AI settings saved successfully!');
+            closeAISettingsModal();
+        } else {
+            alert('Error: ' + (data.error || 'Failed to save settings'));
+        }
+    })
+    .catch(err => {
+        alert('Error saving settings: ' + err);
     });
 }
 
@@ -3590,6 +3716,13 @@ function openNewModalForSubgroup(groupId, subgroup) {
 }
 
 /* ═══ New-event modal ═══ */
+function toggleRecurrenceEnd(wrapperId, recurrenceValue) {
+    const wrapper = document.getElementById(wrapperId);
+    if (wrapper) {
+        wrapper.style.display = (recurrenceValue && recurrenceValue !== 'none') ? 'block' : 'none';
+    }
+}
+
 function toggleAllDay(chk, rowId) {
     const row = document.getElementById(rowId);
     row.style.opacity = chk.checked ? '0.35' : '1';
@@ -3694,6 +3827,8 @@ function openDetailModal(card) {
 
     document.getElementById('d-desc-input').value  = d.description || '';
     document.getElementById('e_recurrence').value  = d.recurrence || 'none';
+    document.getElementById('e_recurrence_end').value = d.recurrence_end || '';
+    toggleRecurrenceEnd('e_recurrence_end_wrapper', d.recurrence || 'none');
     document.getElementById('e_adv_panel').style.display = 'none';
 
     const alldayChk = document.getElementById('e_allday');
@@ -4575,6 +4710,9 @@ function rejectInvite(groupId) {
 
 /* ═══ Init ═══ */
 window.addEventListener('DOMContentLoaded', () => {
+    // Update group button based on current view
+    updateGroupButton();
+
     // Initialize terminal prompt from cookie
     const termGroup = getCookie('TerminalGroup');
     if (termGroup) {
