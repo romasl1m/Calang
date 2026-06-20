@@ -622,7 +622,6 @@ void api_routes(crow::SimpleApp &app) {
         return response_data;
     });
 
-    // CROW_ROUTE(app, "/api/generate_command").methods("POST"_method)[&](const crow::request &req) {
     CROW_ROUTE(app, "/api/generate_command").methods("POST"_method)([api_key](const crow::request &req) {
         crow::response res;
         res.add_header("Content-Type", "application/json");
@@ -634,9 +633,22 @@ void api_routes(crow::SimpleApp &app) {
             return res;
         }
 
-        string url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent";
+        // Read AI configuration
+        string model_type = "gemini";
+        string local_endpoint = "http://localhost:11434/api/generate";
+        string model_name = "qwen3:4b";
+        ifstream config_file(".ai_config");
+        if (config_file.is_open()) {
+            try {
+                json config;
+                config_file >> config;
+                model_type = config.value("model_type", "gemini");
+                local_endpoint = config.value("local_endpoint", local_endpoint);
+                model_name = config.value("model_name", model_name);
+            } catch (...) {}
+            config_file.close();
+        }
 
-        json openai_request;
         string sys_prompt = "Create a single Linux/Bash terminal command for the following request. Return ONLY the command as plain text. Do not use markdown, no explanations, no comments. The available commands are:\n\n"
                            "- cat YYYY-MM-DD : show events for a specific date\n"
                            "- cat N : show next N events and store dates\n"
@@ -649,76 +661,128 @@ void api_routes(crow::SimpleApp &app) {
                            "- $DATE or $DATE[n] : use stored dates in commands (n=index, 0=first)\n\n"
                            "Request: " + prompt;
 
-        openai_request["contents"][0]["parts"][0]["text"] = sys_prompt;
-
-        string request_data = openai_request.dump();
         string response_data;
+        string generated_command;
 
-        CURL *curl = curl_easy_init();
-        if (curl) {
-            struct curl_slist *headers = nullptr;
-            headers = curl_slist_append(headers, "Content-Type: application/json");
-            headers = curl_slist_append(headers, ("X-goog-api-key: " + api_key).c_str());
+        if (model_type == "qwen" || model_type == "local") {
+            // Use local Qwen/Ollama model
+            json qwen_request = {
+                {"model", model_name},
+                {"prompt", sys_prompt},
+                {"stream", false},
+                {"options", {
+                    {"temperature", 0.3},
+                    {"num_predict", 128}
+                }}
+            };
 
-            curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
-            curl_easy_setopt(curl, CURLOPT_POST, 1L);
-            curl_easy_setopt(curl, CURLOPT_POSTFIELDS, request_data.c_str());
-            curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, request_data.size());
+            string request_data = qwen_request.dump();
 
-            // Odkomentowane poprawki: przekazanie nagłówków
-            curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
+            CURL *curl = curl_easy_init();
+            if (curl) {
+                struct curl_slist *headers = nullptr;
+                headers = curl_slist_append(headers, "Content-Type: application/json");
 
-            // Odkomentowane poprawki: callback i zmienna do zapisu odpowiedzi
-            curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
-            curl_easy_setopt(curl, CURLOPT_WRITEDATA, &response_data);
+                curl_easy_setopt(curl, CURLOPT_URL, local_endpoint.c_str());
+                curl_easy_setopt(curl, CURLOPT_POST, 1L);
+                curl_easy_setopt(curl, CURLOPT_POSTFIELDS, request_data.c_str());
+                curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, request_data.size());
+                curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
+                curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
+                curl_easy_setopt(curl, CURLOPT_WRITEDATA, &response_data);
+                curl_easy_setopt(curl, CURLOPT_TIMEOUT, 30L);
 
-            cerr << "REQUEST:\n"
-                 << request_data << endl;
-            cerr << "API KEY = [" << api_key << "]" << endl;
-            cerr << "LEN = " << api_key.size() << endl;
-            CURLcode cres = curl_easy_perform(curl);
-            curl_easy_cleanup(curl);
-            curl_slist_free_all(headers);
+                CURLcode cres = curl_easy_perform(curl);
+                curl_easy_cleanup(curl);
+                curl_slist_free_all(headers);
 
-            if (cres != CURLE_OK) {
+                if (cres != CURLE_OK) {
+                    res.code = 500;
+                    res.body = json({{"error", "Failed to contact local AI model"}}).dump();
+                    return res;
+                }
+            }
+
+            // Parse Ollama response
+            try {
+                json qwen_response = json::parse(response_data);
+                if (qwen_response.contains("response")) {
+                    generated_command = qwen_response["response"].get<string>();
+                } else if (qwen_response.contains("error")) {
+                    res.code = 500;
+                    res.body = json({{"error", "Local AI Error: " + qwen_response["error"].get<string>()}}).dump();
+                    return res;
+                }
+            } catch (const exception &e) {
                 res.code = 500;
-                res.body = json({{"error", "Failed to contact AI API"}}).dump();
+                res.body = json({{"error", "Failed to parse local AI response"}}).dump();
+                return res;
+            }
+        } else {
+            // Use Google Gemini API
+            if (api_key.empty()) {
+                res.code = 500;
+                res.body = json({{"error", "Gemini API key not configured. Set GEMINI_API_KEY or switch to local Qwen in .ai_config"}}).dump();
+                return res;
+            }
+
+            string url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent";
+
+            json openai_request;
+            openai_request["contents"][0]["parts"][0]["text"] = sys_prompt;
+
+            string request_data = openai_request.dump();
+
+            CURL *curl = curl_easy_init();
+            if (curl) {
+                struct curl_slist *headers = nullptr;
+                headers = curl_slist_append(headers, "Content-Type: application/json");
+                headers = curl_slist_append(headers, ("X-goog-api-key: " + api_key).c_str());
+
+                curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
+                curl_easy_setopt(curl, CURLOPT_POST, 1L);
+                curl_easy_setopt(curl, CURLOPT_POSTFIELDS, request_data.c_str());
+                curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, request_data.size());
+                curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
+                curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
+                curl_easy_setopt(curl, CURLOPT_WRITEDATA, &response_data);
+
+                CURLcode cres = curl_easy_perform(curl);
+                curl_easy_cleanup(curl);
+                curl_slist_free_all(headers);
+
+                if (cres != CURLE_OK) {
+                    res.code = 500;
+                    res.body = json({{"error", "Failed to contact AI API"}}).dump();
+                    return res;
+                }
+            }
+
+            try {
+                json google_json = json::parse(response_data);
+
+                if (google_json.contains("error")) {
+                    res.code = 500;
+                    res.body = json({{"error", "API Error: " + google_json["error"]["message"].get<string>()}}).dump();
+                    return res;
+                }
+
+                generated_command = google_json["candidates"][0]["content"]["parts"][0]["text"];
+            } catch (const exception &e) {
+                res.code = 500;
+                res.body = json({{"error", "Failed to parse Gemini response"}}).dump();
                 return res;
             }
         }
 
-        // Dodane wypisywanie odpowiedzi przed próbą jej parsowania
-        cerr << "RESPONSE:\n"
-             << response_data << endl;
-
-        try {
-            json google_json = json::parse(response_data);
-
-            if (google_json.contains("error")) {
-                cerr << "GOOGLE API ERROR: " << google_json["error"].dump() << endl;
-                res.code = 500;
-                res.body = json({{"error", "API Error: " + google_json["error"]["message"].get<string>()}}).dump();
-                return res;
-            }
-
-            string generated_command = google_json["candidates"][0]["content"]["parts"][0]["text"];
-
-            if (not generated_command.empty() and generated_command.back() == '\n') {
-                generated_command.pop_back();
-            }
-
-            res.code = 200;
-            res.body = json({{"command", generated_command}}).dump();
-            return res;
-
-        } catch (const exception &e) {
-            cerr << "PARSING ERROR: " << e.what() << endl;
-            cerr << "RAW RESPONSE: " << response_data << endl;
-
-            res.code = 500;
-            res.body = json({{"error", "Błąd parsowania: " + string(e.what())}}).dump();
-            return res;
+        // Clean up the command
+        if (!generated_command.empty() && generated_command.back() == '\n') {
+            generated_command.pop_back();
         }
+
+        res.code = 200;
+        res.body = json({{"command", generated_command}}).dump();
+        return res;
     });
 
     // New AI chat endpoint

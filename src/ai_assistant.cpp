@@ -200,6 +200,63 @@ string extract_command_from_response(const string &response) {
     return "No valid response from AI";
 }
 
+string generate_action_comment(const string &command) {
+    // Trim leading/trailing whitespace
+    string cmd = command;
+    cmd.erase(0, cmd.find_first_not_of(" \t\n\r"));
+    cmd.erase(cmd.find_last_not_of(" \t\n\r") + 1);
+
+    // Handle chained commands
+    if (cmd.find("&&") != string::npos || cmd.find("||") != string::npos || cmd.find(";") != string::npos) {
+        return "Executed multiple commands";
+    }
+
+    // Determine the primary command
+    if (cmd.find("touch") == 0) {
+        // Check if it has a title in quotes
+        size_t quote_start = cmd.find('"');
+        size_t quote_end = cmd.find('"', quote_start + 1);
+        if (quote_start != string::npos && quote_end != string::npos) {
+            string title = cmd.substr(quote_start + 1, quote_end - quote_start - 1);
+            return "Added an event: \"" + title + "\"";
+        }
+        return "Added an event";
+    }
+    else if (cmd.find("rm") == 0) {
+        return "Deleted an event";
+    }
+    else if (cmd.find("cat") == 0) {
+        // Check if viewing by date or number
+        if (cmd.find("-") != string::npos) {
+            return "Showed events for a specific date";
+        }
+        return "Showed upcoming events";
+    }
+    else if (cmd.find("grep") == 0) {
+        size_t quote_start = cmd.find('"');
+        size_t quote_end = cmd.find('"', quote_start + 1);
+        if (quote_start != string::npos && quote_end != string::npos) {
+            string search = cmd.substr(quote_start + 1, quote_end - quote_start - 1);
+            return "Searched for events containing: \"" + search + "\"";
+        }
+        return "Searched for events";
+    }
+    else if (cmd.find("cd") == 0) {
+        return "Changed to a different group";
+    }
+    else if (cmd.find("ls") == 0) {
+        return "Listed available groups";
+    }
+    else if (cmd.find("dates") == 0) {
+        return "Showed available dates with events";
+    }
+    else if (cmd.find("echo") == 0) {
+        return "Displayed a message";
+    }
+
+    return "Executed command";
+}
+
 string build_ai_prompt(const string &userInput, const string &currentUsername, const string &currentgroup) {
     stringstream prompt;
 
@@ -280,22 +337,35 @@ string process_ai_command(const string &userInput, const string &currentUsername
     // Extract command from response
     string command = extract_command_from_response(response);
 
-    output << "AI: Executing: " << command << "\n\n";
+    output << "AI: " << generate_action_comment(command) << "\n";
+    output << "Command: " << command << "\n\n";
 
     // Split multiple commands and execute them
     stringstream commandStream(command);
     string line;
+    int command_count = 0;
 
     while (getline(commandStream, line)) {
         if (line.empty() || line[0] == '#')
             continue;
 
-        // Process each command
+        command_count++;
+
+        // Generate a comment for each command if multiple commands
+        if (command_count > 1) {
+            output << "AI: " << generate_action_comment(line) << "\n";
+        }
+
+        // Process each command and show results
         string result = process_terminal_command(line, currentUsername, currentgroup);
         output << result;
 
         if (result.find("CLEAR_SIGNAL") != string::npos) {
             return "CLEAR_SIGNAL";
+        }
+
+        if (command_count > 1) {
+            output << "\n";
         }
     }
 

@@ -1,6 +1,15 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-W7WPFD1W08"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-W7WPFD1W08');
+</script>
     <meta charset="UTF-8">
     <title>Calang</title>
     <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
@@ -492,7 +501,7 @@
             border: 1px solid var(--border);
             border-radius: 8px;
             overflow: hidden;
-            height: 340px;
+            height: 500px;
         }
         .ai-quick-actions {
             display: flex;
@@ -1802,7 +1811,7 @@
 
             /* AI chat optimized for phone */
             .ai-chat-container {
-                height: 180px;
+                height: 280px;
             }
 
             .ai-msg {
@@ -1928,7 +1937,7 @@
             }
 
             .ai-chat-container {
-                height: 240px;
+                height: 350px;
             }
         }
 
@@ -4052,51 +4061,80 @@ function sendAIMessage() {
     btn.disabled = true;
     btn.textContent = '...';
 
-    fetch('/api/ai_chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            message: message,
-            history: chatHistory
+    // Check if the message is a command request (contains words like add, create, delete, show, find, search)
+    const commandKeywords = ['add', 'create', 'make', 'delete', 'remove', 'show', 'find', 'search', 'list', 'view', 'get', 'change', 'switch', 'tomorrow', 'today', 'next', 'event'];
+    const isCommandRequest = commandKeywords.some(keyword => message.toLowerCase().includes(keyword));
+
+    if (isCommandRequest) {
+        // Generate a command
+        fetch('/api/generate_command', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: 'prompt=' + encodeURIComponent(message)
         })
-    })
-    .then(r => r.json())
-    .then(data => {
-        if (data.response) {
-            addChatMessage('assistant', data.response);
-        } else if (data.error) {
-            addChatMessage('system', 'Error: ' + data.error);
-        }
-
-        // If there's a suggested command, show it with a run button
-        if (data.command) {
-            addChatMessage('command', '', data.command);
-        }
-
-        // Check if any commands were executed that modify events
-        if (data.commands && data.commands.length > 0) {
-            data.commands.forEach(cmd => {
-                if (cmd.command) {
-                    addChatMessage('command', '', cmd.command);
-                }
-            });
-
-            const hasEventModification = data.commands.some(cmd =>
-                cmd.command.includes('touch') || cmd.command.includes('RELOAD_CALENDAR')
-            );
-
-            if (hasEventModification) {
-                addChatMessage('system', 'Refreshing calendar...');
-                setTimeout(() => location.reload(), 500);
+        .then(r => r.json())
+        .then(data => {
+            if (data.command) {
+                addChatMessage('assistant', 'I generated this command for you:');
+                addChatMessage('command', '', data.command);
+            } else if (data.error) {
+                addChatMessage('system', 'Error: ' + data.error);
             }
-        }
-    })
-    .catch(() => addChatMessage('system', 'Failed to connect to AI'))
-    .finally(() => {
-        btn.disabled = false;
-        btn.textContent = '→';
-        input.focus();
-    });
+        })
+        .catch(() => addChatMessage('system', 'Failed to generate command'))
+        .finally(() => {
+            btn.disabled = false;
+            btn.textContent = '→';
+            input.focus();
+        });
+    } else {
+        // Use regular AI chat for general conversation
+        fetch('/api/ai_chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                message: message,
+                history: chatHistory
+            })
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.response) {
+                addChatMessage('assistant', data.response);
+            } else if (data.error) {
+                addChatMessage('system', 'Error: ' + data.error);
+            }
+
+            // If there's a suggested command, show it with a run button
+            if (data.command) {
+                addChatMessage('command', '', data.command);
+            }
+
+            // Check if any commands were executed that modify events
+            if (data.commands && data.commands.length > 0) {
+                data.commands.forEach(cmd => {
+                    if (cmd.command) {
+                        addChatMessage('command', '', cmd.command);
+                    }
+                });
+
+                const hasEventModification = data.commands.some(cmd =>
+                    cmd.command.includes('touch') || cmd.command.includes('RELOAD_CALENDAR')
+                );
+
+                if (hasEventModification) {
+                    addChatMessage('system', 'Refreshing calendar...');
+                    setTimeout(() => location.reload(), 500);
+                }
+            }
+        })
+        .catch(() => addChatMessage('system', 'Failed to connect to AI'))
+        .finally(() => {
+            btn.disabled = false;
+            btn.textContent = '→';
+            input.focus();
+        });
+    }
 }
 
 document.addEventListener('DOMContentLoaded', function() {
